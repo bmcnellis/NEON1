@@ -6,7 +6,6 @@
 \alias{lm_eqn}
 \alias{Multiplot}
 \alias{NMDS_screeplot}
-\alias{make_NMDS_plot}
 \title{Plot functions for NEON1 analysis}
 \usage{
 HighResTiff(plot_obj, file, width_in, height_in, resolution_dpi, ...)
@@ -16,8 +15,6 @@ lm_eqn(df0, xvar, yvar)
 Multiplot(..., plotlist = NULL, file, cols = 1, layout = NULL)
 
 NMDS_screeplot(mat, kmax = 10)
-
-make_NMDS_plot(mds, data_mat, g_i, g_n, n_c)
 }
 \description{
 NA
