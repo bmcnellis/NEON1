@@ -36,18 +36,22 @@ rm(fence); gc()
 #     2) re-order each polygon by hand, save to a .csv
 
 p_df <- read.csv(file.path(shp_dir, "../fencelines_modified/point_notes.csv"))
+#p_df <- p_df[which(p_df$polyID == 8), ]
 # get fenceline file, now as vertices
 fence <- terra::vect(file.path(shp_dir, '../fencelines_modified/fencelines_vertices.shp'))
 fence <- fence[, -which(names(fence) %in% c('polyID', 'withinPoly'))]
 
 # drop some for testing
 fence <- fence[which(fence$fid %in% p_df$fid), ]
-# random extra popped in, fid = 1586, probably some kind of error
+# random extras popped in
 fence <- fence[-which(fence$fid == 1586), ]
+fence <- fence[-which(fence$fid == 2567), ]
 # add the metadata
 fence_crs <- crs(fence)
 fence <- as.data.frame(fence, geom = 'WKT')
 fence <- dplyr::left_join(fence, p_df, by = 'fid')
+fence_meta <- within(fence, rm(fid, Island, StatusFL, CompletedD, SecondaryM, TertiaryMa, BirdingTap, LineSource, SHAPE_Leng, vertex_ind, vertex_par, vertex_p_1, vertex_p_2, distance, angle, geometry, withinPolyOrder))
+fence_meta <- fence_meta[!duplicated(fence_meta), ]
 
 fence <- terra::vect(fence, geom = 'geometry', crs = fence_crs) %>%
   terra::project(flow_crs) %>%
@@ -57,6 +61,9 @@ fence <- terra::vect(fence, geom = 'geometry', crs = fence_crs) %>%
   dplyr::summarize(do_union = F) %>%
   sf::st_cast('POLYGON')
 
+# dropped meta, add it back in
+fence <- dplyr::left_join(fence, fence_meta, by = 'polyID')
+
 # save resulting polygon file
-sf::st_write(fence, file.path(shp_dir, '../fencelines_modified/fenceline_polygons_NAR.shp'), driver = 'ESRI Shapefile')
+sf::st_write(fence, file.path(shp_dir, '../fencelines_modified/fenceline_polygons_NAR.shp'), driver = 'ESRI Shapefile', append = F)
 
