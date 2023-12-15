@@ -5,6 +5,10 @@ library(dplyr)
 import::from(magrittr, "%>%")
 library(ggplot2)
 
+# Ecosystem structure DP3.30015.001
+# Non-herbaceous perennial vegetation structure DP1.10045.001
+# Plant presence and percent cover DP1.0058.001
+# Vegetation structure DP1.10098.001
 struct_zip <- 'C:/Users/BrandonMcNellis/Documents/NEON_data/NEON_struct-plant.zip'
 
 #struct_file <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures/clim_1.tif'

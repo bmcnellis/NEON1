@@ -9,12 +9,13 @@ ppt_zip <- 'C:/Users/BrandonMcNellis/Documents/NEON_data/NEON_precipitation.zip'
 temp_zip <- 'C:/Users/BrandonMcNellis/Documents/NEON_data/NEON_temp-air-single.zip'
 wind_zip <- 'C:/Users/BrandonMcNellis/Documents/NEON_data/NEON_wind-2d.zip'
 par_zip <- 'C:/Users/BrandonMcNellis/Documents/NEON_data/NEON_par.zip'
+
 clim_pfile_1 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures/clim_1.tif'
 wpar_pfile_1 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures/wpar_1.tif'
 ppt_pfile_2 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures/ppt_2.tif'
 
-# PPT
-
+# Precipitation DP1.00006.001
+ppt_zip <- neonUtilities::zipsByProduct()
 ppt_tbl <- neonUtilities::stackByTable(ppt_zip, savepath = 'envt')
 # PRIPRE_30min: Primary Precipitation pooled over 30 minutes
 # No ABBY in primary precipitation?
@@ -38,7 +39,7 @@ ppt <- ppt_tbl[['SECPRE_30min']] %>%
   #mutate(ppt = ppt / 10) %>%
   ungroup()
 
-# TEMP
+# Single aspirated air temperature (DP1.00002.001)
 
 temp_tbl <- neonUtilities::stackByTable(temp_zip, savepath = 'envt')
 
@@ -52,76 +53,8 @@ temp <- temp_tbl[['SAAT_30min']] %>%
   summarize(tmean = mean(tempSingleMean), tmin = mean(tempSingleMinimum), tmax = mean(tempSingleMaximum)) %>%
   ungroup()
 
-# WIND
-
-wind_tbl <- neonUtilities::stackByTable(wind_zip, savepath = 'envt')
-
-wind <- wind_tbl[['twoDWSD_30min']] %>%
-  filter(windSpeedFinalQF == 0) %>%
-  select(c(siteID, startDateTime, windSpeedMean, windSpeedMinimum, windSpeedMaximum)) %>%
-  mutate(date = as.Date(startDateTime)) %>%
-  filter(date >= min(date[which(siteID == 'PUUM')])) %>%
-  mutate(m_y = lubridate::floor_date(date, 'month')) %>%
-  group_by(siteID, m_y) %>%
-  # lets do "30-minute maximum wind speed, average per day"
-  summarize(wmax = mean(windSpeedMaximum, na.rm = T)) %>%
-  ungroup()
-
-# PAR
-
-# unzip the sensor_position files
-unzip(par_zip, list = T) %>%
-  filter(grepl('sensor_positions', Name)) %>%
-  {unzip(par_zip, files = .$Name, exdir = tempdir())}
-
-# create sensor position key
-pos_key <- file.path(tempdir(), 'NEON_par') %>%
-  list.files(recursive = T, full.names = T) %>%
-  lapply(read.csv) %>%
-  dplyr::bind_rows() %>%
-  select(c(HOR.VER, referenceDescription, zOffset)) %>%
-  distinct() %>%
-  na.omit() %>%
-  mutate(siteID = gsub('Puu Makaala Tower', 'PUUM', referenceDescription)) %>%
-  mutate(siteID = gsub('Guanica Forest Tower', 'GUAN', siteID)) %>%
-  mutate(siteID = gsub('Abby Road Tower', 'ABBY', siteID)) %>%
-  mutate(verticalPosition = formatC(HOR.VER * 1E3, width = 3, format = 'd', flag = '0')) %>%
-  select(c(siteID, verticalPosition, zOffset))
-
-par_tbl <- neonUtilities::stackByTable(par_zip, savepath = 'envt')
-
-par <- par_tbl[['PARPAR_30min']] %>%
-  filter(PARFinalQF == 0) %>%
-  select(c(siteID, startDateTime, verticalPosition, PARMean, PARMinimum, PARMaximum)) %>%
-  mutate(date = as.Date(startDateTime)) %>%
-  filter(date >= min(date[which(siteID == 'PUUM')])) %>%
-  mutate(m_y = lubridate::floor_date(date, 'month')) %>%
-  dplyr::left_join(pos_key) %>%
-  select(-verticalPosition) %>%
-  group_by(siteID) %>%
-  filter(zOffset %in% c(min(zOffset), max(zOffset))) %>%
-  # bot is 0.21, 0.83, 0.93 for GUAN, ABBY, PUUM
-  # top is 18.55, 22.96, 32.42 for ABBY, GUAN, PUUM
-  mutate(sensor_pos = ifelse(zOffset == min(zOffset), 'bot', 'top')) %>%
-  ungroup() %>%
-  # drop times between 11PM and 4AM
-  filter(lubridate::hour(startDateTime) %in% c(4:22)) %>%
-  # aggregate by monthly value
-  group_by(siteID, m_y, sensor_pos) %>%
-  summarize(
-    PARmean = mean(PARMean, na.rm = T),
-    PARmin = mean(PARMinimum, na.rm = T),
-    PARmax = mean(PARMaximum, na.rm = T)
-  ) %>%
-  ungroup()
-
 # Join ppt/temp by siteID/m_y
 clim <- dplyr::left_join(ppt, temp, by = c('siteID', 'm_y'))
-
-# Join wind/par by siteID/m_y
-wpar <- dplyr::left_join(par, wind, by = c('siteID', 'm_y')) %>%
-  mutate(wmax = ifelse(sensor_pos == 'bot', wmax, NA)) %>%
-  mutate(wind_lab = rep('Wind Speed', nrow(.)))
 
 # Summary statistics for climate variables
 # min of ppt in PUUM
@@ -134,6 +67,9 @@ clim %>%
   filter(siteID == 'PUUM') %>%
   slice_max(ppt)
 # 820 ppt for February 2023
+
+# Relative humidity DP1.00098.001
+# Shortwave and longwave radiation (net radiometer) DP1.00023.001
 
 # correlation between sites in PPT
 ppt_xx <- tidyr::pivot_wider(ppt, names_from = siteID, values_from = ppt)
@@ -212,58 +148,3 @@ ppt_20_22_plot <- ggplot(data = ppt_20_22, aes(x = year, y = MSP, shape = siteID
 
 HighResTiff(ppt_20_22_plot, ppt_pfile_2, 6, 4, 300)
 
-# All days at GUAN with > 50 mm rain
-# 2019-09-25, Tropical Storm Karen
-# 2020-07-30, Hurricane Isaias
-# 2020-11-11/12, pre-Hurricane Iota
-# 2022-09-18/19, Hurricane Fiona
-# 2022-10-26/27, pre-Hurricane Lisa
-# 2022-11-05, pre-Hurricane Nicole
-#
-# All GUAN daily totals > 50mm rain were associated with tropical storms or weather
-# systems that eventually became tropical storms.
-
-yp <- c(0, 850)   # in this example, PAR
-ys <- c(0, 5)    # in this example, wind speed
-b <- diff(yp) / diff(ys)
-a <- yp[1] - (b * ys[1])
-
-# Plot of PAR/wind
-wpar_plot <- ggplot(data = wpar, aes(x = m_y, y = PARmean, color = sensor_pos, shape = wind_lab)) +
-
-  geom_line(size = 0.8) +
-  geom_point(mapping = aes(y = a + wmax * b), color = 'black', fill = 'black') +
-
-  facet_wrap(~ factor(siteID, levels = c('ABBY', 'PUUM', 'GUAN')), ncol = 1) +
-
-  scale_y_continuous(
-    bquote('PAR (μmol'~~s^-1~m^-2~')'),
-    sec.axis = sec_axis(~ (. - a) / b, name = bquote('Wind Speed (m'~~s^-1~')'))
-  ) +
-
-  scale_color_manual(
-    values = c('grey30', 'grey70'),
-    labels = c('Lower Tower', 'Upper Tower'),
-    guide = guide_legend(override.aes = list(
-      linetype = c('solid', 'solid'),
-      shape = c(NA, NA)
-    ))
-  ) +
-
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(color = 'black'),
-    axis.text.y = element_text(color = 'black'),
-    #panel.grid.major = element_blank(),
-    #panel.grid.minor = element_blank(),
-    strip.background = element_rect(fill = 'grey95'),
-    strip.text = element_text(color = 'black')
-  ) +
-  labs(
-    x = '',
-    #y = bquote('PAR (μmol'~s^-1~m^-2~')'),
-    color = 'PAR',
-    shape = ''
-  )
-# maybe add hurricanes later???
-HighResTiff(wpar_plot, wpar_pfile_1, 6, 6, 300)
