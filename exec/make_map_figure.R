@@ -4,6 +4,8 @@ library(ggplot2)
 library(viridis)
 library(NEON1)
 
+# also creates data object for flow age
+
 shp_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/spatial/NEON_Shapefiles'
 fig_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures'
 
@@ -37,6 +39,13 @@ incl_plots[order(incl_plots)]
 stopifnot(!any(c(21:30, 51:100) %in% incl_plots))
 plots <- st_transform(plots, crs(flow))
 plots <- st_crop(plots, outline)
+
+# what flow data is associated with what plots?
+flow_meta <- flow[unlist(st_within(plots, flow)), c('strat_code', 'symbol', 'age_group', 'age_range')]
+flow_meta <- st_drop_geometry(flow_meta)
+flow_meta <- data.frame(plotID = st_drop_geometry(plots$Name_2), flow_meta)
+row.names(flow_meta) <- NULL
+usethis::use_data(flow_meta, overwrite = T)
 
 tower <- st_read(file.path(shp_dir, 'PUUM_Tower', 'Tower.shp'))
 tower <- st_transform(tower, crs(flow))
