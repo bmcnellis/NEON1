@@ -4,32 +4,29 @@
 # Setup
 #install_github("admahood/neonPlantEcology")
 library(neonPlantEcology)
-#library(vegan)
 library(NEON1)
-library(gllvm)
+library(glmmTMB)
 
 set.seed(1)
 
-# Filenames
+data_dir <- '/media/bem/data/NEON'
 
-# (1) How much of plant composition is explained by time or disturbance at Puʻu Makaʻala?
-
-# Create matrix of cover data
-data_div <- neonPlantEcology::npe_download(sites = c("PUUM"))
-# can add WREF and GUAN if need be
+# Cover data
+#data_div <- neonPlantEcology::npe_download(sites = c("WREF"))
+data_div <- NEON1::PUUM_div
 data_df <- neonPlantEcology::npe_longform(data_div, scale = 'plot')
 data_df$cover <- data_df$cover / 100
 data_df <- data_df[-which(data_df$taxonID == '2PLANT'), ]
 colnames(data_df)[which(colnames(data_df) == 'eventID')] <- 'year'
+
+# Other data
+data_df <- dplyr::left_join(data_df, NEON1::flow_meta, by = 'plotID')
+hemi <- neonUtilities::stackByTable(file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'))
+
+# Create data matrix
 data_mat <- neonPlantEcology::npe_community_matrix(data_div)
 data_mat <- data_mat[, -which(colnames(data_mat) == '2PLANT')]
-#data_mat <- data_mat[grepl('2018', row.names(data_mat)), ]
-#data_mat <- data_mat[rowSums(data_mat) > 0, ]
 data_mat <- data_mat / 100
-
-# single zero-inflation parameter applied to all observations
-# ziformula ~ 1
-# hurdle model: ziformula ~ . ???
 
 c0 <- glmmTMBControl(
   optCtrl = list(iter.max = 1e3, eval.max = 1e3),
@@ -38,21 +35,19 @@ c0 <- glmmTMBControl(
 
 # this is glmmTMB's version of a GLVM using a reduced rank covariance structure
 # from: https://cran.r-project.org/web/packages/glmmTMB/vignettes/covstruct.html
-mod0 <- glmmTMB(cover ~ age_group + year,
+fit <- glmmTMB(cover ~ age_group + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
                 data = data_df, family = beta_family(), ziformula = ~taxonID,
-                control = c0)
-# mod0 zi parameter correlates with plot occurence across all taxon, but
-# still some poor fit
-mod1 <- glmmTMB(cover ~ age_group + year + rr(taxonID + 0|plotID, d = 2),
-                data = data_df, family = beta_family(), ziformula = ~taxonID,
-                control = c0)
+                control = c0, start = list())
 
-mod0_sim <- DHARMa::simulateResiduals(mod0)
-plot(mod0_sim)
+fit_sim <- DHARMa::simulateResiduals(fit)
+plot(fit_sim)
 
-fit.rr <- mod0
-ll <- fit.rr$obj$env$report(fit.rr$fit$parfull)$fact_load[[1]]
-ll <- as.data.frame(ll)
-ll <- setNames(ll, c('L1', 'L2'))
+ll <- fit$obj$env$report()$fact_load[[2]] |>
+  as.data.frame() |>
+  cbind(unique(data_df$taxonID)) |>
+  cbind(unique(data_df$taxonID)[order(unique(data_df$taxonID))]) |>
+  setNames(c("L1", "L2", "taxonID", "taxonID_ordered"))
 
+results_LV_df <- ll
+usethis::use_data(results_LV_df, overwrite = T)
 

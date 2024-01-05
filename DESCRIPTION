@@ -17,7 +17,6 @@ Suggests:
 Imports:
     neonUtilities (>= 2.2.1),
     neonPlantEcology (>= 1.1),
-    vegan (>= 2.6.4),
-    pairwiseAdonis (>= 0.4.1)
+    vegan (>= 2.6.4)
 Depends: 
-    R (>= 4.2.2)
+    R (>= 4.1.2)
