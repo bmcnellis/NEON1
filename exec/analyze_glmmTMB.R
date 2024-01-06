@@ -21,7 +21,8 @@ colnames(data_df)[which(colnames(data_df) == 'eventID')] <- 'year'
 
 # Other data
 data_df <- dplyr::left_join(data_df, NEON1::flow_meta, by = 'plotID')
-hemi <- neonUtilities::stackByTable(file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'))
+hemi <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'), savepath = 'envt')
+traits <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_traits-foliar.zip'), savepath = 'envt')
 
 # Create data matrix
 data_mat <- neonPlantEcology::npe_community_matrix(data_div)
