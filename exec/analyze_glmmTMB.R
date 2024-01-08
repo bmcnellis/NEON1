@@ -9,7 +9,8 @@ library(glmmTMB)
 
 set.seed(1)
 
-data_dir <- '/media/bem/data/NEON'
+#data_dir <- '/media/bem/data/NEON'
+data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
 
 # Cover data
 #data_div <- neonPlantEcology::npe_download(sites = c("WREF"))
@@ -21,7 +22,7 @@ colnames(data_df)[which(colnames(data_df) == 'eventID')] <- 'year'
 
 # Other data
 data_df <- dplyr::left_join(data_df, NEON1::flow_meta, by = 'plotID')
-hemi <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'), savepath = 'envt')
+#hemi <- NEON1::hemisphere_processed_or_whatever
 traits <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_traits-foliar.zip'), savepath = 'envt')
 
 # Create data matrix
