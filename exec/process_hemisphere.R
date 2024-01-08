@@ -2,6 +2,7 @@
 library(NEON1)
 library(neonUtilities)
 library(reticulate)
+library(exifr)
 
 data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
 img_dir <- 'C:/Users/BrandonMcNellis/Documents/scratch/R_temp'
@@ -33,7 +34,7 @@ for (i in seq(nrow(hemi1))) {
 
   f_URL <- hemi1[i, 'imageFileUrl']
   f_loc <- file.path(img_dir, hemi1[i, 'imageFileName'])
-  f_out <- file.path(proc_dir, paste0(basename(hemi1[i, 'imageFileName']), 'processed'))
+  f_out <- file.path(proc_dir, paste0(tools::file_path_sans_ext(hemi1[i, 'imageFileName']), '_processed'))
 
   # Only run if the output file is not present
   if (!file.exists(f_out)) {
@@ -44,9 +45,18 @@ for (i in seq(nrow(hemi1))) {
     }
 
     # Process the local file
+    ex0 <- exifr::read_exif(f_loc)
+    h <- ex0$ImageHeight
+    w <- ex0$ImageWidth
+    s <- prod(h, w)
+
+    # just need to write the process script in python here
+    #reticulate::py_run_string('hemipy.zenith()')
 
     # Clean-up
-    file.remove(f_out)
+    if (file.exists(f_out)) {
+      file.remove(f_loc)
+    }
   }
 
 }
