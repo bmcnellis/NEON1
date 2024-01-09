@@ -4,26 +4,30 @@ library(neonUtilities)
 library(reticulate)
 library(exifr)
 
-data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
-img_dir <- 'C:/Users/BrandonMcNellis/Documents/scratch/R_temp'
-proc_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/data/processed_hemisphere_photos'
 
-# Use the following citation for this method:
-# Brown, L.A., Morris, H., Leblanc, S., Bai, G., Lanconelli, C., Gobron, N.,
-#     Meier, C., Dash, J. HemiPy: A Python module for automated estimation of
-#     forest biophysical variables and uncertainties from digital hemispherical
-#     photographs, Methods Ecol. Evol.
+# this script is shit and reticulate is always a waste of time
+
+#data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
+data_dir <- '/media/bem/data/NEON'
+#img_dir <- 'C:/Users/BrandonMcNellis/Documents/scratch/R_temp'
+img_dir <- '/media/bem/data/NEON/temp_img_dir'
+#proc_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/data/processed_hemisphere_photos'
+proc_dir <- '/media/bem/data/NEON/processed_hemisphere_photos'
 
 # Uses python package at: https://github.com/luke-a-brown/hemipy
 
 # Reticulate setup - only needs to be run once per script run, but should
 # be deleted afterwards to reduce version control size.
 ret_dir <- file.path(getwd(), 'r-python')
-reticulate::virtualenv_create(ret_dir)
-lib_dir <- file.path(ret_dir, 'Lib/site-packages')
-system2(paste0('pip install https://github.com/luke-a-brown/hemipy/archive/refs/tags/v0.1.2.zip --upgrade --target="', lib_dir, '"'))
-# If `system2` fails, you can run the pip command in git bash, e.g.:
-# pip install https://github.com/luke-a-brown/hemipy/archive/refs/tags/v0.1.2.zip --upgrade --target="C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/NEON1/r-python/Lib/site-packages"
+#reticulate::virutalenv_create(ret_dir) # for Windows
+reticulate::virtualenv_create(ret_dir, python = install_python()) # for Ubuntu
+#lib_dir <- file.path(ret_dir, 'Lib/site-packages') # for Windows
+lib_dir <- file.path(ret_dir, 'lib/python3.9/site_packages') # for Ubuntu
+system2('./r-python/bin/pip install https://github.com/luke-a-brown/hemipy/archive/refs/tags/v0.1.2.zip --upgrade')
+
+# Python env setup - used each time the R script is used
+reticulate::use_virtualenv('./r-python')
+import('hemipy')
 
 hemi0 <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'), savepath = 'envt')
 hemi1 <- hemi0$dhp_perimagefile
