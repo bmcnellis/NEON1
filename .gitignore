@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 r-python/
+inst/process_hemisphere/__pycache__/
