@@ -38,56 +38,32 @@ bl_p <- bl$bet_parataxonomistID
 bl_x <- bl$bet_expertTaxonomistIDProcessed
 bl_s <- bl$bet_sorting
 
+# 'individualID' connects `bet_paratxonomistID` and `bet_expertTaxonomistID`
 key_cols_1 <- c('namedLocation', 'domainID', 'siteID', 'plotID', 'setDate', 'collectDate', 'individualID')
+# 'subsampleID' connects the identification data with the sorted sample data
+key_cols_2 <- c('namedLocation', 'domainID', 'siteID', 'plotID', 'setDate', 'collectDate', 'subsampleID')
+# 'sampleID' connects the field data to the sorted sample data
+key_cols_3 <- c('namedLocation', 'domainID', 'siteID', 'plotID', 'setDate', 'collectDate', 'sampleID')
 
 # Combine the multiple data streams into one sparse dataframe
-# bet_parataxonomistID and bet_expertTaxonomistID need to be combined first
+# Combine `bet_paratxonomistID` and `bet_expertTaxonomistID`
 # All `individualID` in bet_expertTaxonomistID are in bet_parataxonomistID,
 bl_id <- dplyr::left_join(bl_p, bl_x, by = key_cols_1, suffix = c('_para', '_expe'))
 
+# Combine `bet_paratxonomistID`, `bet_expertTaxonomistID`, and `bet_sorting`
 # All `subsampleCode` in bet_parataxonomistID are in bet_sorting, reverse is not true
-bl_sd <- dplyr::left_join(bl_s, bl_d, by = c(key_cols, 'subsampleID'), suffix = c('_sort', '_para'))
+bl_sd <- dplyr::left_join(bl_s, bl_id, by = key_cols_2, suffix = c('_sort', '_id'))
 
-bl_fs <- dplyr::left_join(bl_fs, bl_d, by = c('plotID', 'trapID', 'collectDate'), suffix = c('_fs', '_para'))
-# Field data is last - the unique identifiers are plotID, trapID, collectDate
+# Combine `bet_paratxonomistID`, `bet_expertTaxonomistID`, `bet_sorting`, and `bet_fielddata`
+bl_all <- dplyr::left_join(bl_sd, bl_f, by = key_cols_3, suffix = c('_sortID', '_field'))
+bl_all <- bl_all[, order(colnames(bl_all))]
 
-# Combine the multiple data streams into one sparse dataframe
-# Parent dataframe is bet_parataxonomistID
-# Modify expert data to be merged with para data
-# These columns share names with para data, but have different values:
-bl_rnx <- c(
-  uid_ex = 'uid',
-  identifiedDate_ex = 'identifiedDate',
-  taxonID_ex = 'taxonID',
-  taxonRank_Ex = 'taxonRank',
-  scientificName_ex = 'scientificName',
-  scientificNameAuthorship_ex = 'scientificNameAuthorship',
-  identificationQualifier_ex = 'identificationQualifier',
-  morphospeciesID_ex = 'morphospeciesID',
-  identificationReferences_ex = 'identificationReferences',
-  identifiedBy_ex = 'identifiedBy',
-  nativeStatusCode_ex = 'nativeStatusCode',
-  remarks_ex = 'remarks',
-  identificationHistoryID_ex = 'identificationHistoryID'
-)
-bl_x <- dplyr::rename(bl_x, any_of(bl_rnx))
-# The rest are key columns:
-#     namedLocation, domainID, siteID, plotID, setDate, collectDate,
-#     individualID, sampleCondition, publicationDate
-bl_c <- dplyr::left_join(bl_d, bl_x)
-# Modify field data to be merged with combined ID data
-bl_rnf <- c(
-  uid_f = 'uid',
-  recordedBy_f = 'recordedBy',
-  remarks_f = 'remarks'
-)
-bl_f <- dplyr::rename(bl_f, any_of(bl_rnf))
-# The rest are key columns: namedLocation, domainID, siteID, plotID, trapID,
-#     setDate, collectDate, sampleCondition, publicationDate, release
-bl_0 <- dplyr::left_join(bl_c, bl_f)
-
-bl_rns <- c(
-
-)
-# The rest are key columns:
-#     namedLocation, domainID, siteID,
+# Remove extraneous columns
+# Remove extraneous taxonomic information
+bl_all <- bl_all[, -which(colnames(bl_all) %in% c('class', 'family', 'genus', 'kingdom', 'order', 'phylum'))]
+# Remove extraneous sample identification
+# This assumes that the expert identification supersedes the parataxonomist identification
+bl_all$scientificName_coal <- dplyr::coalesce(bl_all$scientificName_expe, bl_all$scientificName_para)
+bl_all$scientificName_coal <- ifelse(is.na(bl_all$scientificName_expe), bl_all$scientificName_coal, bl_all$scientificName_expe)
+# What should supercede - the scientific name from the sorting, or the para/expe ID's?
+bl_all <- bl_all[, -which(colnames(bl_all) %in% c('scientificName_coal', 'scientificName_para', 'scientificName_expe'))]
