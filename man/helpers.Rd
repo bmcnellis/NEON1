@@ -2,7 +2,11 @@
 % Please edit documentation in R/helpers.R
 \name{helpers}
 \alias{helpers}
+\alias{logit_Warton}
 \title{Helper functions for NEON1}
+\usage{
+logit_Warton(y, epsilon = NULL)
+}
 \description{
 Self-explanatory
 }
