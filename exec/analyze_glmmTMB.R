@@ -16,6 +16,7 @@ set.seed(1)
 
 #data_dir <- '/media/bem/data/NEON'
 data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
+resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
 
 # Cover data
 #PUUM_div <- neonPlantEcology::npe_download(sites = c("PUUM"))
@@ -51,125 +52,60 @@ c0 <- glmmTMBControl(
 # this is glmmTMB's version of a GLVM using a reduced rank covariance structure
 # from: https://cran.r-project.org/web/packages/glmmTMB/vignettes/covstruct.html
 #
-# Beta-family, ZI
-fit_0 <- glmmTMB(cover ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-                 data = data_df, family = beta_family(), ziformula = ~taxonID,
-                 control = c0, start = list())
-#
-# Beta-family, no-ZI
-# omitting zero-inflation term causes strong grouping within the residuals
-fit_1 <- glmmTMB(cover ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-                 data = data_df, family = beta_family(),
-                 control = c0, start = list())
-#
-# Normal-family, ZI
-# poor convergence, bad fit
-#fit_2 <- glmmTMB(cover ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = gaussian(), ziformula = ~taxonID,
-#                 control = c0, start = list())
-#
-# Normal-family, no-ZI
-# poor convergence, bad fit
-#fit_3 <- glmmTMB(cover ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = gaussian(),
-#                 control = c0, start = list())
-#
+# Models tested:
+#   beta_family()
+#     Sometimes a beta family fixes the grouped residuals, but it generally makes the QQ residuals bow-shaped.
+#     A logit_Warton() transform of the response with a gaussian() family improves QQ residuals much better.
+#   gaussian()
+#     A gaussian link without a response transform has poor convergence and very poor fit. But, a logit_Warton()
+#     transform seems to be a major improvement.
+#   ziformula = ~taxonID
+#     Zero-inflation terms don't seem to help the residuals very much. Perhaps, in this dataset, there isn't
+#     much zero-inflation happening at the taxa level, but rather more at the plot level.
+
+
+
+
+
 # Normal-family, logit-xform, no-ZI
 # QQ much better for normality, but still within-group deviance
-fit_4 <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
+fit_1 <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
                  data = data_df, family = gaussian(),
                  control = c0, start = list())
-#
+
 # Normal-family, logit-xform, ZI
 # doesnt appear to change much vs fit_4
-#fit_5 <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = gaussian(), ziformula = ~taxonID,
-#                 control = c0, start = list())
-#
+fit_2 <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | year) + rr(taxonID + 0|plotID, d = 2),
+                 data = data_df, family = gaussian(), ziformula = ~taxonID,
+                 control = c0, start = list())
+
 # Normal-family, logit-xform, non-ZI, nativeStatusCode as RE
 # By-group fit improved, but QQ residuals look worse
-#fit_6 <- glmmTMB(cover_logit ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = gaussian(),
-#                 control = c0, start = list())
-#
+fit_3 <- glmmTMB(cover_logit ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
+                 data = data_df, family = gaussian(),
+                 control = c0, start = list())
+
 # Normal-family, logit-xform, ZI, nativeStatusCode as RE
 # By-group fit improved, but QQ residuals look worse
-#fit_7 <- glmmTMB(cover_logit ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = gaussian(), ziformula = ~taxonID,
-#                 control = c0, start = list())
-#
+fit_4 <- glmmTMB(cover_logit ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
+                 data = data_df, family = gaussian(), ziformula = ~taxonID,
+                 control = c0, start = list())
+
 # Beta-family, ZI, nativeStatusCode as RE
 # Same problems as with beta family
-#fit_8 <- glmmTMB(cover ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
-#                 data = data_df, family = beta_family(), ziformula = ~taxonID,
-#                 control = c0, start = list())
+fit_5 <- glmmTMB(cover ~ age_fac + (1 | nativeStatusCode) + (1 | year) + rr(taxonID + 0|plotID, d = 2),
+                 data = data_df, family = beta_family(), ziformula = ~taxonID,
+                 control = c0, start = list())
 
-r_0 <- resid(fit_0)
-s_0 <- DHARMa::simulateResiduals(fit_0)
-plot(s_0, rank = T)
-plot(s_0, asFactor = T)
-
-r_1 <- resid(fit_1)
-s_1 <- DHARMa::simulateResiduals(fit_1)
-plot(s_1, rank = T)
-plot(s_1, asFactor = T)
-
-#r_2 <- resid(fit_2)
-#s_2 <- DHARMa::simulateResiduals(fit_2)
-#plot(s_2, rank = T)
-#plot(s_2, asFactor = T)
-
-#r_3 <- resid(fit_3)
-#s_3 <- DHARMa::simulateResiduals(fit_3)
-#plot(s_3, rank = T)
-#plot(s_3, asFactor = T)
-
-r_4 <- resid(fit_4)
-s_4 <- DHARMa::simulateResiduals(fit_4)
-plot(s_4, rank = T)
-plot(s_4, asFactor = T)
-# plotResiduals should look like a no-sig-difference boxplot, with mean at 0.5 and box from 0.25-0.75
-plotResiduals(s_4, form = data_df$age_fac)
-# looks good, first 3 age groups deviate within-group
-plotResiduals(s_4, form = data_df$nativeStatusCode)
-# looks terrible, invasives are a big problem
-plotResiduals(s_4, form = data_df$year)
-# could be worse, all deviate within-group
-plotResiduals(s_4, form = data_df$plotID)
-# 2, 10, 11, 18, 19 are bad
+# Check residuals
+cr_grp <- list(data_df$age_fac, data_df$nativeStatusCode, data_df$year, data_df$plotID)
+NEON1::check_residuals(fit_1, resid_dir, cr_grp)
+NEON1::check_residuals(fit_2, resid_dir, cr_grp)
+NEON1::check_residuals(fit_3, resid_dir, cr_grp)
+NEON1::check_residuals(fit_4, resid_dir, cr_grp)
+NEON1::check_residuals(fit_5, resid_dir, cr_grp)
 # 10, 11, 18, 19 are consistent problems
 
-#r_5 <- resid(fit_5)
-#s_5 <- DHARMa::simulateResiduals(fit_5)
-#plot(s_5, rank = T)
-#plot(s_5, asFactor = T)
-
-#r_6 <- resid(fit_6)
-#s_6 <- DHARMa::simulateResiduals(fit_6)
-#plot(s_6, rank = T)
-#plot(s_6, asFactor = T)
-#plotResiduals(s_6, form = data_df$age_fac)
-#plotResiduals(s_6, form = data_df$nativeStatusCode)
-#plotResiduals(s_6, form = data_df$year)
-#plotResiduals(s_6, form = data_df$plotID)
-
-#r_7 <- resid(fit_7)
-#s_7 <- DHARMa::simulateResiduals(fit_7)
-#plot(s_7, rank = T)
-#plot(s_7, asFactor = T)
-#plotResiduals(s_7, form = data_df$age_fac)
-#plotResiduals(s_7, form = data_df$nativeStatusCode)
-#plotResiduals(s_7, form = data_df$year)
-#plotResiduals(s_7, form = data_df$plotID)
-
-#r_8 <- resid(fit_8)
-#s_8 <- DHARMa::simulateResiduals(fit_8)
-#plot(s_8, rank = T)
-#plot(s_8, asFactor = T)
-#plotResiduals(s_8, form = data_df$age_fac)
-#plotResiduals(s_8, form = data_df$nativeStatusCode)
-#plotResiduals(s_8, form = data_df$year)
-#plotResiduals(s_8, form = data_df$plotID)
 
 ll <- fit$obj$env$report()$fact_load[[2]] |>
   as.data.frame() |>

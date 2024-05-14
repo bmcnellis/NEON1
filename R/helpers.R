@@ -49,3 +49,33 @@ logit_Warton <- function(y, epsilon = NULL) {
   return(log(y / (1 - y)))
 
 }
+#' @rdname helpers
+#' @export
+check_residuals <- function(fit, dir, grp = NULL, nm = NULL) {
+
+  require(glmmTMB)
+  require(DHARMa)
+
+  r0 <- resid(fit)
+  s0 <- DHARMa::simulateResiduals(fit)
+
+  nm0 <- paste0(ifelse(is.null(nm), deparse(substitute(fit)), nm), '_')
+  f0 <- paste0(dir, '/check_residuals_', nm0, format(Sys.Date(), "%Y%m%d"), '.pdf')
+
+  pdf(file = paste0(dir, '/check_residuals_',  deparse(substitute(fit)), '_', format(Sys.Date(), "%Y%m%d"), '.pdf'))
+
+  plot(s0, rank = T)
+  plot(s0, asFactor = T)
+
+  if (!is.null(grp)) {
+
+    stopifnot(is.list(grp))
+    # plotResiduals should (more or less) have a mean at 0.5, boxes from 0.25-0.75, and whiskers from 0-1
+    lapply(seq_along(grp), \(xx) DHARMa::plotResiduals(s0, form = grp[[xx]]))
+
+  }
+
+  dev.off()
+  invisible()
+
+}

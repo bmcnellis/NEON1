@@ -1,5 +1,7 @@
 # BEM May 2024
 
+# TODO: 'Rhynchospora chinensis' assumed native, b/c native ssp, unsure on other ssp presence
+
 library(NEON1)
 
 key_nativeStatusCode <- data.frame(taxonID = character(), nativeStatusCode = character())
