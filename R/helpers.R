@@ -79,3 +79,25 @@ check_residuals <- function(fit, dir, grp = NULL, nm = NULL) {
   invisible()
 
 }
+#' @rdname helpers
+#' @export
+standardize_df <- function(df_in) {
+
+  require(tidyr)
+  require(vegan)
+
+  df0 <- df_in
+  df0 <- tidyr::pivot_wider(df0, names_from = taxonID, values_from = cover)
+
+  cind <- c((ncol(df_in) - 2 + 1):ncol(df0))
+
+  mat <- df0[, cind]
+  mat <- as.matrix(mat)
+  mat <- apply(mat, c(1, 2), \(xx) ifelse(is.na(xx), 0, xx))
+  mat <- vegan::decostand(mat, method = 'total', MARGIN = 1)
+
+  df1[, cind] <- mat
+  df1 <- tidyr::pivot_longer(df1, cind, names_to = taxonID, values_to = cover)
+
+  return(df1)
+}

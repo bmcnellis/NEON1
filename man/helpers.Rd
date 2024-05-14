@@ -4,11 +4,14 @@
 \alias{helpers}
 \alias{logit_Warton}
 \alias{check_residuals}
+\alias{standardize_df}
 \title{Helper functions for NEON1}
 \usage{
 logit_Warton(y, epsilon = NULL)
 
 check_residuals(fit, dir, grp = NULL, nm = NULL)
+
+standardize_df(df_in)
 }
 \description{
 Self-explanatory

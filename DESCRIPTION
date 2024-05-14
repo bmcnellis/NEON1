@@ -17,6 +17,8 @@ Suggests:
 Imports:
     neonUtilities (>= 2.2.1),
     neonPlantEcology (>= 1.1),
-    vegan (>= 2.6.4)
+    vegan (>= 2.6.4),
+    glmmTMB (>= 1.1.8),
+    DHARMa (>= 0.4.6)
 Depends: 
     R (>= 4.1.2)

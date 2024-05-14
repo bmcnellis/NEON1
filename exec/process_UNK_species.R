@@ -10,6 +10,8 @@ data_div <- NEON1::PUUM_div
 data_df <- neonPlantEcology::npe_longform(data_div, scale = 'plot')
 
 unks <- unique(data_df$scientificName[which(data_df$nativeStatusCode == 'UNK')])
+unkc <- unique(data_df$taxonID[which(data_df$scientificName %in% unks)])
+#unk_code <- unique(data_df$taxonID[which(data_df$nativeStatusCode == 'UNK')])
 
 res <- vector('list', 3)
 
