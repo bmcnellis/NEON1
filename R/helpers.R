@@ -53,10 +53,11 @@ logit_Warton <- function(y, epsilon = NULL) {
 #' @export
 check_residuals <- function(fit, dir, grp = NULL, nm = NULL) {
 
+  on.exit(try(dev.off(), silent = T))
+
   require(glmmTMB)
   require(DHARMa)
 
-  r0 <- resid(fit)
   s0 <- DHARMa::simulateResiduals(fit)
 
   nm0 <- paste0(ifelse(is.null(nm), deparse(substitute(fit)), nm), '_')
@@ -76,6 +77,7 @@ check_residuals <- function(fit, dir, grp = NULL, nm = NULL) {
   }
 
   dev.off()
+
   invisible()
 
 }
@@ -100,4 +102,42 @@ standardize_df <- function(df_in) {
   df1 <- tidyr::pivot_longer(df1, cind, names_to = taxonID, values_to = cover)
 
   return(df1)
+}
+#' @rdname helpers
+#' @export
+div_to_long <- function(div, type = 'plant') {
+
+  # imports
+  require(tidyr)
+  require(dplyr)
+
+  # magics
+  df_ind <- 4
+  c0 <- c(
+    'siteID', 'decimalLatitude', 'decimalLongitude', 'elevation', 'plotType',
+    'plotID', 'subplotID', 'endDate', 'divDataType', 'taxonID', 'scientificName',
+    'nativeStatusCode', 'otherVariables', 'percentCover'
+  )
+  ntax <- 'taxonID'
+  ncov <- 'percentCover'
+  t0 <- ifelse(type == 'plant', 'plantSpecies', 'otherVariables')
+  cov_NA <- 0.5
+  df_ind <- 4
+
+  # process
+  df_out <- div[[df_ind]] |>
+    dplyr::select(c0) |>
+    dplyr::filter(divDataType == t0) |>
+    # put in a trace value for NA
+    dplyr::mutate(percentCover = ifelse(is.na(percentCover), cov_NA, percentCover)) |>
+    # remove non-uniquely-identified subplots
+    dplyr::group_by(dplyr::across(c(-percentCover))) |>
+    dplyr::summarize(percentCover = sum(percentCover)) |>
+    dplyr::ungroup() |>
+    tidyr::pivot_wider(names_from = ntax, values_from = ncov, values_fill = list(percentCover = 0)) |>
+    tidyr::pivot_longer(cols = !c0[!c0 %in% c(ntax, ncov)], names_to = ntax, values_to = ncov)
+
+  # returns
+  return(df_out)
+
 }
