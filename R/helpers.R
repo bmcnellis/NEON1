@@ -105,7 +105,7 @@ standardize_df <- function(df_in) {
 }
 #' @rdname helpers
 #' @export
-div_to_long <- function(div, type = 'plant') {
+div_to_long <- function(div, type = 'plant', add_zeros = T) {
 
   # imports
   require(tidyr)
@@ -133,9 +133,14 @@ div_to_long <- function(div, type = 'plant') {
     # remove non-uniquely-identified subplots
     dplyr::group_by(dplyr::across(c(-percentCover))) |>
     dplyr::summarize(percentCover = sum(percentCover)) |>
-    dplyr::ungroup() |>
-    tidyr::pivot_wider(names_from = ntax, values_from = ncov, values_fill = list(percentCover = 0)) |>
-    tidyr::pivot_longer(cols = !c0[!c0 %in% c(ntax, ncov)], names_to = ntax, values_to = ncov)
+    dplyr::ungroup()
+
+  if (add_zeros) {
+
+    df_out <- df_out |>
+      tidyr::pivot_wider(names_from = ntax, values_from = ncov, values_fill = list(percentCover = 0)) |>
+      tidyr::pivot_longer(cols = !c0[!c0 %in% c(ntax, ncov)], names_to = ntax, values_to = ncov)
+  }
 
   # returns
   return(df_out)

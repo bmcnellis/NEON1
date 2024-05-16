@@ -14,7 +14,7 @@ check_residuals(fit, dir, grp = NULL, nm = NULL)
 
 standardize_df(df_in)
 
-div_to_long(div, type = "plant")
+div_to_long(div, type = "plant", add_zeros = T)
 }
 \description{
 Self-explanatory
