@@ -8,9 +8,8 @@ set.seed(1)
 #     'Rhynchospora chinensis' assumed native, b/c native ssp, unsure on other ssp presence
 
 ### Libraries
-#install_github("admahood/neonPlantEcology")
-library(neonPlantEcology)
 library(NEON1)
+library(dplyr)
 library(glmmTMB)
 library(DHARMa)
 
@@ -33,38 +32,44 @@ c0 <- glmmTMB::glmmTMBControl(
   start_method = list(method = NULL, jitter.sd = 0)
 )
 
-### Import & modification
-#PUUM_div <- neonPlantEcology::npe_download(sites = c("PUUM"))
-#usethis::use_data(PUUM_div, overwrite = T)  # "2024-05-13 12:32:03 HST"
 
-data_div <- NEON1::PUUM_div
-data_df <- NEON1::div_to_long(data_div, add_zeros = T)
-data_df <- dplyr::left_join(data_df, NEON1::flow_meta, by = 'plotID')
-# add hemisphere data
-#hemi <- NEON1::hemisphere_processed_or_whatever
-# add traits
-#traits <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_traits-foliar.zip'), savepath = 'envt')
-colnames(data_df)[which(colnames(data_df) == 'percentCover')] <- 'cover'
-data_df$cover <- data_df$cover / 100
-data_df$cover_logit <- NEON1::logit_Warton(data_df$cover)
-data_df$age_fac <- as.factor(paste0('G:', data_df$age_group - 1, '_', data_df$age_range))
-data_df$nativeStatusCode[which(data_df$scientificName == 'Rhynchospora chinensis Nees & Meyen')] <- 'N'
-data_df$nativeStatusCode <- ifelse(data_df$nativeStatusCode == 'N', '0_N', data_df$nativeStatusCode)
-data_df$nativeStatusCode <- ifelse(data_df$nativeStatusCode == 'I', '1_I', data_df$nativeStatusCode)
-data_df$nativeStatusCode <- ifelse(data_df$nativeStatusCode == 'UNK', '2_U', data_df$nativeStatusCode)
-data_df$nativeStatusCode <- as.factor(data_df$nativeStatusCode)
-data_df$endDate <- as.character(data_df$endDate)
+df0 <- NEON1::PUUM_div |>
+  NEON1::div_to_long(add_zeros = T) |>
+  left_join(NEON1::flow_meta, by = 'plotID') |>
+  left_join(NEON1::dhp, by = 'plotID') |>
+  mutate(
+    scientificName = case_when(scientificName == 'Rhynchospora chinensis Nees & Meyen' ~ 'N'),
+    nativeStatusCode = case_when(nativeStatusCode == 'N' ~ '0_N', nativeStatusCode == 'I' ~ '1_I', nativeStatusCode == 'UNK' ~ '2_U'),
+    endDate = as.Date(endDate),
+    date = as.character(endDate),
+    cover = percentCover / 100,
+    percentCover = NULL,
+    cover_logit = NEON1::logit_Warton(cover),
+    age_fac = as.factor(paste0('G:', age_group - 1, '_', age_range)),
+    native = as.factor(nativeStatusCode),
+    cov_0 = cover < 0.0001
+  ) |>
+  select(-c(siteID, decimalLatitude, decimalLongitude, scientificName, divDataType, otherVariables, pai_err, fcover_err, fipar_err, age_range, age_group)) |>
+  distinct()
+
+# wasnt there something weird where there was only 1 cover value for each species in each plot?
+df1 <- df0 |>
+  filter(taxonID != '2PLANT')
+
+df1 |>
+  group_by(plotID, date, taxonID, subplotID) |>
+  summarise(n())
+
+test0 <- df1 |>
+  filter(plotID == 'PUUM_001', taxonID == 'ACKO')
 
 # set up multiple input dataframes to check for omission changes
 data_df_0 <- data_df
-data_df_1 <- data_df[-which(data_df$taxonID %in% omit_codes_1), ]
-data_df_2 <- data_df[-which(data_df$taxonID %in% omit_codes_2), ]
-data_df_2$nativeStatusCode <- as.character(data_df_2$nativeStatusCode)
-data_df_2$nativeStatusCode <- as.factor(data_df_2$nativeStatusCode)
-
-# set up multiple input dataframes to use for hurdles
-data_df_0_Z <- within(data_df_0, cov_0 <- cover < 0.0001)
-data_df_0_NZ <- data_df_0[which(data_df_0$cover > 0.0001), ]
+data_df_1 <- data_df |>
+  filter(!taxonID %in% omit_codes_1)
+data_df_1 <- data_df |>
+  filter(!taxonID %in% omit_codes_2) |>
+  mutate(native = as.factor(nativeStatusCode))
 
 ### Modelling
 
@@ -99,13 +104,13 @@ data_df_0_NZ <- data_df_0[which(data_df_0$cover > 0.0001), ]
 
 # Normal-family, logit-xform, no-ZI
 # QQ much better for normality, but still within-group deviance
-# only real problem groups are nativeStatusCode, because invasives are weird
+# only real problem groups are native, because invasives are weird
 # Specifically, high predicted cover values have lower scaled residuals than they should
-fit_0 <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | endDate) + rr(taxonID + 0|plotID, d = 2),
-                 data = data_df_0_NZ, family = gaussian(),
+fit_0 <- glmmTMB(cover_logit ~ age_fac + pai + native + (1 | date) + rr(taxonID + 0|plotID, d = 2),
+                 data = filter(data_df, cov_0 = F), family = gaussian(),
                  control = c0, start = list())
 
-fit_1 <- glmmTMB(cov_0 ~ age_fac + nativeStatusCode + (1 | endDate) + rr(taxonID + 0|plotID, d = 2),
+fit_1 <- glmmTMB(cov_0 ~ age_fac + pai + native + (1 | endDate) + rr(taxonID + 0|plotID, d = 2),
                  data = data_df_0_Z, family = binomial(),
                  control = c0, start = list())
 
@@ -122,9 +127,8 @@ fit_XX <- glmmTMB(cover_logit ~ age_fac + nativeStatusCode + (1 | endDate) + rr(
 # Gamma can have dispersion parameter, gaussian can not, explore this
 
 # Check residuals
-cr_grp_0 <- list(data_df_0$age_fac, data_df_0$nativeStatusCode, data_df_0$endDate, data_df_0$plotID)
-cr_grp_1 <- list(data_df_1$age_fac, data_df_1$nativeStatusCode, data_df_1$endDate, data_df_1$plotID)
-cr_grp_2 <- list(data_df_2$age_fac, data_df_2$nativeStatusCode, data_df_2$endDate, data_df_2$plotID)
+cr_grp_0 <- list(data_df_0$age_fac, data_df_0$native, data_df_0$date, data_df_0$plotID)
+cr_grp_1 <- list(data_df_1$age_fac, data_df_1$native, data_df_1$date, data_df_1$plotID)
 
 NEON1::check_residuals(fit_0, resid_dir, cr_grp_0)
 NEON1::check_residuals(fit_1, resid_dir, cr_grp_0)

@@ -1,67 +1,61 @@
-# BEM 1/8/2024
+# BEM July 2024
+
 library(NEON1)
-library(neonUtilities)
-library(reticulate)
-library(exifr)
+library(dplyr)
 
+sph <- function(vec) {
 
-# this script is shit and reticulate is always a waste of time
+  v <- sapply(strsplit(vec, '\\+/-'), \(xx) xx[1])
+  v <- ifelse(v == 'NULL', NA, v)
+  v <- as.numeric(v)
 
-#data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
-data_dir <- '/media/bem/data/NEON'
-#img_dir <- 'C:/Users/BrandonMcNellis/Documents/scratch/R_temp'
-img_dir <- '/media/bem/data/NEON/temp_img_dir'
-#proc_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/data/processed_hemisphere_photos'
-proc_dir <- '/media/bem/data/NEON/processed_hemisphere_photos'
+  e <- sapply(strsplit(vec, '\\+/-'), \(xx) xx[2])
+  e <- as.numeric(e)
 
-# Uses python package at: https://github.com/luke-a-brown/hemipy
-
-# Reticulate setup - only needs to be run once per script run, but should
-# be deleted afterwards to reduce version control size.
-ret_dir <- file.path(getwd(), 'r-python')
-#reticulate::virutalenv_create(ret_dir) # for Windows
-reticulate::virtualenv_create(ret_dir, python = install_python()) # for Ubuntu
-#lib_dir <- file.path(ret_dir, 'Lib/site-packages') # for Windows
-lib_dir <- file.path(ret_dir, 'lib/python3.9/site_packages') # for Ubuntu
-system2('./r-python/bin/pip install https://github.com/luke-a-brown/hemipy/archive/refs/tags/v0.1.2.zip --upgrade')
-
-# Python env setup - used each time the R script is used
-reticulate::use_virtualenv('./r-python')
-import('hemipy')
-
-hemi0 <- neonUtilities::stackByTable(filepath = file.path(data_dir, 'NEON_hemispheric-photos-veg.zip'), savepath = 'envt')
-hemi1 <- hemi0$dhp_perimagefile
-# image files are in hemi1$imageFileUrl
-
-for (i in seq(nrow(hemi1))) {
-  if (i > 1) break
-
-  f_URL <- hemi1[i, 'imageFileUrl']
-  f_loc <- file.path(img_dir, hemi1[i, 'imageFileName'])
-  f_out <- file.path(proc_dir, paste0(tools::file_path_sans_ext(hemi1[i, 'imageFileName']), '_processed'))
-
-  # Only run if the output file is not present
-  if (!file.exists(f_out)) {
-
-    # If local file is missing, download it
-    if (!file.exists(f_loc)) {
-      utils::download.file(f_URL, f_loc)
-    }
-
-    # Process the local file
-    ex0 <- exifr::read_exif(f_loc)
-    h <- ex0$ImageHeight
-    w <- ex0$ImageWidth
-    s <- prod(h, w)
-
-    # just need to write the process script in python here
-    #reticulate::py_run_string('hemipy.zenith()')
-
-    # Clean-up
-    if (file.exists(f_out)) {
-      file.remove(f_loc)
-    }
-  }
+  data.frame(val = v, err = e)
 
 }
 
+# PAI    : Plant area index
+# GAI    : Green area index
+# FIPAR  : Fraction  of intercepted photosynthetically active radiation
+# FCOVER : Fraction of vegetation cover
+# PAIe   : Effective plant area index
+
+# Upward-facing images represent PAI, as the image classification is sensitive to all canopy elements
+# Downward-facing images represent GAI, as the image classification is sensitive to green elements
+# PAI = GAI hereafter
+
+# Brown et al. (2023) suggest Hinge-method is best. Using PAI versus PAIe for unknown reasons.
+
+dhp <- read.csv('../data/neon_dhp_puum.csv') |>
+  rename('plotID' = plot) |>
+  mutate(
+    date = as.Date(strptime(date, '%d/%m/%Y', tz = 'HST')),
+    pai = sph(pai_up)[, 1],
+    pai_err = sph(pai_up)[, 2],
+    fcover = sph(fcover_up)[, 1],
+    fcover_err = sph(fcover_up)[, 2],
+    fipar = sph(fipar_up)[, 1],
+    fipar_err = sph(fipar_up)[, 2],
+  ) |>
+  select(c(plotID, date, pai, pai_err, fcover, fcover_err, fipar, fipar_err))
+
+
+# what do the regularly-censused plots look like?
+plot(dhp$date[which(dhp$plotID == 'PUUM_031')], dhp$pai[which(dhp$plotID == 'PUUM_031')], xlab = 'Date', ylab = 'PAI - 31')
+plot(dhp$date[which(dhp$plotID == 'PUUM_039')], dhp$pai[which(dhp$plotID == 'PUUM_039')], xlab = 'Date', ylab = 'PAI - 39')
+plot(dhp$date[which(dhp$plotID == 'PUUM_041')], dhp$pai[which(dhp$plotID == 'PUUM_041')], xlab = 'Date', ylab = 'PAI - 41')
+
+
+# reduce down to one measurement per plot
+dhp <- dhp |>
+  group_by(plotID) |>
+  summarise(across(-date, ~ mean(.x, na.rm = T)), .groups = 'drop')
+
+# add measurements for 032, 034, 042
+dhp <- rbind(dhp, data.frame(plotID = 'PUUM_032', within(dhp[which(dhp$plotID == 'PUUM_039'), ], rm(plotID))))
+dhp <- rbind(dhp, data.frame(plotID = 'PUUM_034', within(dhp[which(dhp$plotID == 'PUUM_031'), ], rm(plotID))))
+dhp <- rbind(dhp, data.frame(plotID = 'PUUM_042', within(dhp[which(dhp$plotID == 'PUUM_041'), ], rm(plotID))))
+
+usethis::use_data(dhp, overwrite = T)

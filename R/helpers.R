@@ -146,3 +146,30 @@ div_to_long <- function(div, type = 'plant', add_zeros = T) {
   return(df_out)
 
 }
+#' @rdname helpers
+#' @export
+date_match <- function(x, y, p) {
+  # finds the closest date match in dhp for a vector of plant collection dates
+
+  # xx is data_df$endDate, yy is NEON1::dhp
+  # requires grouped dataframe
+  stopifnot(length(p) == 1)
+
+  if (p %in% unique(y$plot)) {
+
+    # get only dates within the active group
+    y0 <- y[which(y$plot == p), 'date']
+    # apply along the length of the data dates and find match within dhp
+    z <- sapply(x, \(xx) y0[which.min(abs(y0 - xx))])
+    # reconvert to date
+    z <- as.Date(z, origin = '1970-01-01')
+
+  } else {
+
+    z <- rep(NA, length(x))
+
+  }
+
+  return(z)
+
+}

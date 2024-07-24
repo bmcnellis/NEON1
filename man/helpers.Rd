@@ -6,6 +6,7 @@
 \alias{check_residuals}
 \alias{standardize_df}
 \alias{div_to_long}
+\alias{date_match}
 \title{Helper functions for NEON1}
 \usage{
 logit_Warton(y, epsilon = NULL)
@@ -15,6 +16,8 @@ check_residuals(fit, dir, grp = NULL, nm = NULL)
 standardize_df(df_in)
 
 div_to_long(div, type = "plant", add_zeros = T)
+
+date_match(x, y, p)
 }
 \description{
 Self-explanatory
