@@ -7,6 +7,7 @@
 \alias{standardize_df}
 \alias{div_to_long}
 \alias{date_match}
+\alias{sph}
 \title{Helper functions for NEON1}
 \usage{
 logit_Warton(y, epsilon = NULL)
@@ -18,6 +19,8 @@ standardize_df(df_in)
 div_to_long(div, type = "plant", add_zeros = T)
 
 date_match(x, y, p)
+
+sph(vec)
 }
 \description{
 Self-explanatory

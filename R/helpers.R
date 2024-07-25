@@ -173,3 +173,17 @@ date_match <- function(x, y, p) {
   return(z)
 
 }
+#' @rdname helpers
+#' @export
+sph <- function(vec) {
+
+  v <- sapply(strsplit(vec, '\\+/-'), \(xx) xx[1])
+  v <- ifelse(v == 'NULL', NA, v)
+  v <- as.numeric(v)
+
+  e <- sapply(strsplit(vec, '\\+/-'), \(xx) xx[2])
+  e <- as.numeric(e)
+
+  data.frame(val = v, err = e)
+
+}
