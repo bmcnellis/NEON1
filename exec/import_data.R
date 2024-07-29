@@ -25,16 +25,7 @@ div_one <- d0$div_1m2Data |>
     taxonRank %in% c('genus', 'species', 'subspecies', 'variety')
     # drops 1 family + 210 kingdom = 211 rows, mostly not-identified
   ) |>
-  select(-c(
-    uid, namedLocation, domainID, siteID, geodeticDatum, coordinateUncertainty,
-    elevationUncertainty, nlcdClass, boutNumber, samplingProtocolVersion, eventID,
-    divDataType, targetTaxaPresent, otherVariablesPresent, otherVariablesPresent,
-    taxonRank, family, plotType, decimalLatitude, decimalLongitude, elevation, scientificName,
-    identificationQualifier, taxonIDRemarks, morphospeciesID, morphospeciesIDRemarks,
-    identificationReferences, identificationHistoryID, otherVariables, heightPlantSpecies,
-    remarks, measuredBy, recordedBy, samplingImpractical, samplingImpracticalRemarks,
-    biophysicalCriteria, publicationDate, release, nativeStatusCode
-  )) |>
+  select(plotID, subplotID, endDate, scientificName, percentCover) |>
   distinct()
 
 # Plant cover data - 10m
@@ -52,12 +43,9 @@ met <- d0$div_1m2Data |>
 # Combines both 1m and 10m+ data
 spp <- d0$div_1m2Data |>
   filter(divDataType == 'plantSpecies') |>
-  select(taxonID, scientificName, taxonRank, family, nativeStatusCode) |>
+  select(scientificName, taxonID, taxonRank, family, nativeStatusCode) |>
   bind_rows(select(.data = d0$div_10m2Data100m2Data, taxonID, scientificName, taxonRank, family, nativeStatusCode)) |>
-  mutate(
-    binomialName = sapply(strsplit(scientificName, ' '), \(xx) paste(xx[1], xx[2])),
-    nativeSimple = case_when(nativeStatusCode == 'I' ~ 'I', is.na(nativeStatusCode) ~ NA, .default = 'N')
-  ) |>
+  mutate(binomialName = gsub('\\.', '', sapply(strsplit(scientificName, ' '), \(xx) paste(xx[1], xx[2], sep = '_')))) |>
   distinct()
 
 ### dhp data
