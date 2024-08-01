@@ -120,9 +120,11 @@ fit_1_1 <- glmmTMB(cover ~ (1|date/plotID),
                    data = df1, family = ordbeta(),
                    control = c0, start = list())
 NEON1::check_residuals(fit_1_1, resid_dir, list(df1$date, df1$plotID))
-fit_1_2 <- glmmTMB(cover ~ pai*binomialName + (1|date/plotID),
+fit_1_2 <- glmmTMB(cover ~ (1|plotID/date),
                    data = df1, family = ordbeta(),
                    control = c0, start = list())
 NEON1::check_residuals(fit_1_2, resid_dir, list(df1$date, df1$plotID, df1$binomialName))
-
+fit_1_2 <- glmmTMB(cover ~ rr(binomialName + 0|date/plotID, d = 2),
+                   data = df1, family = ordbeta(),
+                   control = c0, start = list())
 
