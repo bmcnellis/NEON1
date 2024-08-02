@@ -65,3 +65,5 @@ mod0 <- gllvm::gllvm(
 #  # probably need to set a row effect by year
 #  studyDesign = data.frame(year = yr), row.eff = ~(1|year)
 #)
+
+

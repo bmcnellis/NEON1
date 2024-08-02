@@ -61,13 +61,17 @@ mat0 <- df0 |>
 env1 <- df0 |>
   select(c(plotDate, ageFactor, pai)) |>
   arrange(plotDate) |>
-  distinct()
+  distinct() |>
+  as.data.frame()
 # create study-design matrix
 stu1 <- df0 |>
   select(c(plotDate, plotID, endDate)) |>
   arrange(plotDate) |>
-  select(plotDate, plotID) |>
-  distinct()
+  mutate(dateFactor = as.factor(as.character(endDate))) |>
+  mutate(plotID = as.factor(plotID)) |>
+  select(plotDate, plotID, dateFactor) |>
+  distinct() |>
+  as.data.frame()
 
 stopifnot(nrow(env1) == nrow(mat0), nrow(env1) == nrow(stu1))
 stopifnot(identical(row.names(mat0), env1$plotDate))
@@ -75,13 +79,34 @@ stopifnot(identical(row.names(mat0), stu1$plotDate))
 row.names(mat0) <- NULL
 env1 <- env1[, -1]
 stu1 <- stu1[, -1]
+stu1$plotID <- as.factor(stu1$plotID)
 
 # modelling
+# split up for hurdle
+matL <- 1 * (mat0 > 0.0001)
+matP <- apply(mat0, c(1, 2), \(xx) ifelse(xx < 0.000001, NA, xx))
+xf1 <- as.formula(~ pai)
+rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 
-xf1 <- as.formula(~ ageFactor)
+# testing
+matL <- matL[, sample(ncol(matL), size = 10, replace = F)]
+t0 <- rowSums(matL) > 0
+matL <- matL[t0, ]
+env1 <- env1[t0, ]
+stu1 <- stu1[t0, ]
+rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 
-mm <- Hmsc::Hmsc(Y = mat0, XData = env1, XFormula = xf1)
-mm <- Hmsc::sampleMcmc(m,thin = 10, samples = 1000, transient = 500, nChains = 2, nParallel = 2)
+# presence/absence probit model
+ml <- Hmsc::Hmsc(Y = matL, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotID' = rL), distr = 'probit')
+ml <- Hmsc::sampleMcmc(ml, thin = 10, samples = 1000, transient = 500, nChains = 2, nParallel = 2)
 
-mp <- Hmsc::convertToCodaObject(mm)
-summary(mp$Beta)
+ml_p <- Hmsc::convertToCodaObject(ml)
+summary(ml_p$Beta)
+
+# evaluate
+coda::effectiveSize(ml_p$Beta)
+coda::gelman.diag(ml_p$Beta, multivariate = F)$psrf
+# 'Potential scale reduction factor', upper C.I. should be close to 1
+# requires that the normality of the variables should be normally distributed
+ml_pd <- Hmsc::computePredictedValues(ml, expected = F)
+Hmsc::evaluateModelFit(hM = ml, predY = ml_pd)
