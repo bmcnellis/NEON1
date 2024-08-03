@@ -9,16 +9,13 @@ License: CC-BY-SA 2.0
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
-Suggests:
-    magrittr (>= 2.0.3),
+Imports:
     dplyr (>= 1.0.10),
     tidyr (>= 1.2.1),
-    ggplot2 (>= 3.4.2)
-Imports:
+    ggplot2 (>= 3.4.2),
     neonUtilities (>= 2.2.1),
-    neonPlantEcology (>= 1.1),
-    vegan (>= 2.6.4),
-    glmmTMB (>= 1.1.8),
-    DHARMa (>= 0.4.6)
+    Hmsc (>= 3.0),
+    coda (>= 0.19),
+    corrplot (>= 0.92)
 Depends: 
     R (>= 4.1.2)

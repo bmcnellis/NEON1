@@ -14,6 +14,8 @@ library(Hmsc)
 #data_dir <- '/media/bem/data/NEON'
 data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
 resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
+#mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results'
+mod_dir <- '/media/bem/data/NEON/results/model_results'
 
 ### Data import
 
@@ -43,20 +45,23 @@ df0 <- NEON1::div_one |>
   select(plotDate, plotID, endDate, binomialName, percentCover, ageFactor, nativeFactor, pai, fcover, fipar) |>
   mutate(logicalCover = ifelse(percentCover < 0.0001, FALSE, TRUE)) |>
   mutate(fractionCover = percentCover / 100) |>
-  mutate(betaCover = ifelse(fractionCover > 0.99, 0.99, fractionCover)) |>
-  mutate(betaCover = ifelse(betaCover < 0.001, 0.001, betaCover)) |>
-  mutate(logitCover = NEON1::logit_Warton(fractionCover)) |>
   distinct()
 rm(inv_nat)
 
-# create species matrix, plot-date as row with species as col
-mat0 <- df0 |>
+# create species matrix for fractional cover, plot-date as row with species as col
+mat_0 <- df0 |>
   select(c(plotDate, binomialName, fractionCover)) |>
   group_by(plotDate, binomialName) |>
   tidyr::pivot_wider(names_from = binomialName, values_from = fractionCover) |>
   arrange(plotDate) |>
   tibble::column_to_rownames('plotDate') |>
   as.matrix()
+# create species matrix for presence-absence, plot-date as row with species as col
+mat_p <- mat_0 |>
+  apply(c(1, 2), \(xx) ifelse(xx > 0.0001, 1, 0))
+mat_f <- mat_0 |>
+  apply(c(1, 2), \(xx) ifelse(xx < 0.001, NA, xx)) |>
+  apply(c(1, 2), \(xx) ifelse(is.na(xx), NA, NEON1::logit_Warton(xx)))
 # create environmental matrix
 env1 <- df0 |>
   select(c(plotDate, ageFactor, pai)) |>
@@ -74,49 +79,85 @@ stu1 <- df0 |>
   distinct() |>
   as.data.frame()
 
-stopifnot(nrow(env1) == nrow(mat0), nrow(env1) == nrow(stu1))
-stopifnot(identical(row.names(mat0), env1$plotDate))
-stopifnot(identical(row.names(mat0), as.character(stu1$plotDate)))
-row.names(mat0) <- NULL
-env1 <- env1[, -1]
-stu1$plotID <- as.factor(stu1$plotID)
+# check matrix/df alignment and modify for modelling
+stopifnot(
+  nrow(mat_f) == nrow(mat_p),
+  nrow(mat_f) == nrow(env1),
+  nrow(mat_f) == nrow(stu1),
+  identical(row.names(mat_f), row.names(mat_p)),
+  identical(row.names(mat_f), env1$plotDate),
+  identical(row.names(mat_f), as.character(stu1$plotDate))
+)
+mat_f <- mat_f |>
+  `rownames<-`(NULL)
+env1 <- env1 |>
+  select(-plotDate)
+
+# check distribution of effects and covariates
+hist(env1$pai, breaks = 30)
+# pai looks bimodal
+hist(as.numeric(env1$ageFactor), breaks = 30)
+# soil age looks lognormal
 
 # modelling
-# split up for hurdle
-matL <- 1 * (mat0 > 0.0001)
-matP <- apply(mat0, c(1, 2), \(xx) ifelse(xx < 0.000001, NA, xx))
-xf1 <- as.formula(~pai)
-rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 
-# testing
-matL <- matL[, sample(ncol(matL), size = 10, replace = F)]
-t0 <- rowSums(matL) > 0
-matL <- matL[t0, ]
-env1 <- env1[t0, ]
-stu1 <- stu1[t0, ]
-stu1$plotDate <- as.factor(as.character(stu1$plotDate))
-# regular random effect for plot
+# fixed-effects
+xf1 <- as.formula(~ ageFactor + pai)
+# random effects
 #rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 # random effect at sampling unit estimates species-species associations
 rL <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
-# constraints latent factor number
-#rL$nfMin <- 2
-#rL$nfMax <- 2
+# constrain latent factors to 2 levels
+rL$nfMin <- 2
+rL$nfMax <- 2
+
+# fit
+# presence/absence probit model
+if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
+  m_p <- Hmsc::Hmsc(Y = mat_p, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotDate' = rL), distr = 'probit')
+  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 5000, transient = 1000, nChains = 4, nParallel = 4)
+  mc_p <- Hmsc::convertToCodaObject(m_p)
+  ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
+  # requires that the normality of the variables should be normally distributed
+  mp_p <- Hmsc::computePredictedValues(m_p)
+  save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p'), file = file.path(mod_dir, 'm_p_mod.rda'))
+} else {
+  load(file.path(mod_dir, 'm_p_mod.rda'))
+}
+
+# logit proportion cover/NA normal model
+
+# evaluate
+# Beta = species niches, Gamma = traits on niches, Omega = residual species associations, rho = phylogenetic signal
 
 # presence/absence probit model
-ml <- Hmsc::Hmsc(Y = matL, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotDate' = rL), distr = 'probit')
-ml <- Hmsc::sampleMcmc(ml, thin = 10, samples = 2000, transient = 500, nChains = 4, nParallel = 2)
-ml_p <- Hmsc::convertToCodaObject(ml)
-ml_c <- Hmsc::computeAssociations(ml, thin = 10)
+# Beta and Omega are in this model
+if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
+  mf_p <- Hmsc::evaluateModelFit(hM = m_p, predY = mp_p)
+  es_p_beta <- coda::effectiveSize(mc_p$Beta)
+  #es_p_gamm <- coda::effectiveSize(mc_p$Gamma)
+  es_p_omeg <- coda::effectiveSize(mc_p$Omega[[1]])
+  gd_p_beta <- coda::gelman.diag(mc_p$Beta, multivariate = F)$psrf
+  #gd_p_gamm <- coda::gelman.diag(mc_p$Gamma, multivariate = F)$psrf
+  gd_p_omeg <- coda::gelman.diag(mc_p$Omega[[1]], multivariate = F)$psrf
+  mpe_p_beta <- Hmsc::getPostEstimate(m_p, parName = 'Beta')
+  #mpe_p_gamm <- Hmsc::getPostEstimate(m_p, parName = 'Gamma')
+  mpe_p_omeg <- Hmsc::getPostEstimate(m_p, parName = 'Omega')
+  save(list = c('mf_p', 'es_p_beta', 'es_p_omeg', 'gd_p_beta', 'gd_p_omeg', 'mpe_p_beta', 'mpe_p_omeg'), file = file.path(mod_dir, 'm_p_diag.rda'))
+} else {
+  load(file.path(mod_dir, 'm_p_diag.rda'))
+}
 
+hist(mf_p$R2, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$R2), 2)))
+hist(es_p_beta, breaks = 30, main = 'ess:Beta, model p')
+#hist(es_p_gamm, breaks = 30, main = 'ess:Gamma, model p')
+hist(es_p_omeg, breaks = 30, main = 'ess:Omega, model p')
+hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
+#hist(gd_p_gamm, breaks = 30, main = 'psrf:Gamma, model p')
+hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
 
-coda::effectiveSize(ml_p$Beta)
-coda::gelman.diag(ml_p$Beta, multivariate = F)$psrf
-# 'Potential scale reduction factor', upper C.I. should be close to 1
-# requires that the normality of the variables should be normally distributed
-ml_pd <- Hmsc::computePredictedValues(ml, expected = F)
-Hmsc::evaluateModelFit(hM = ml, predY = ml_pd)
-ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
+# cross-validation
+#ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
 # commenting out for now, should probably compare it somehow
 #ml_xv <- Hmsc::computePredictedValues(ml, partition = ml_pa, nParallel = 2)
 #Hmsc::evaluateModelFit(hM = ml, predY = ml_xv)
@@ -124,13 +165,13 @@ ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
 # can we add a spatially explicit model to incorporate subplots?
 
 # figures
-hist(coda::effectiveSize(ml$Beta), main= 'ess(beta)')
-hist(coda::gelman.diag(ml$Beta, multivariate = F)$psrf, main= 'psrf(beta)')
+
 
 ml_pb <- getPostEstimate(ml, parName = 'Beta')
 Hmsc::plotBeta(ml, post = ml_pb, param = 'Support', supportLevel = 0.95)
 
 
+# i think this is now ma_p
 sl <- 0.5
 cp <- ((ml_c[[1]]$support > sl) + (ml_c[[1]]$support < (1 - sl)) > 0) * ml_c[[1]]$mean
 corrplot::corrplot(
