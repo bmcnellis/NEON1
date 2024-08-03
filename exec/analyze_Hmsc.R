@@ -69,23 +69,23 @@ stu1 <- df0 |>
   arrange(plotDate) |>
   mutate(dateFactor = as.factor(as.character(endDate))) |>
   mutate(plotID = as.factor(plotID)) |>
+  mutate(plotDate = as.factor(plotDate)) |>
   select(plotDate, plotID, dateFactor) |>
   distinct() |>
   as.data.frame()
 
 stopifnot(nrow(env1) == nrow(mat0), nrow(env1) == nrow(stu1))
 stopifnot(identical(row.names(mat0), env1$plotDate))
-stopifnot(identical(row.names(mat0), stu1$plotDate))
+stopifnot(identical(row.names(mat0), as.character(stu1$plotDate)))
 row.names(mat0) <- NULL
 env1 <- env1[, -1]
-stu1 <- stu1[, -1]
 stu1$plotID <- as.factor(stu1$plotID)
 
 # modelling
 # split up for hurdle
 matL <- 1 * (mat0 > 0.0001)
 matP <- apply(mat0, c(1, 2), \(xx) ifelse(xx < 0.000001, NA, xx))
-xf1 <- as.formula(~ pai)
+xf1 <- as.formula(~pai)
 rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 
 # testing
@@ -94,19 +94,46 @@ t0 <- rowSums(matL) > 0
 matL <- matL[t0, ]
 env1 <- env1[t0, ]
 stu1 <- stu1[t0, ]
-rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
+stu1$plotDate <- as.factor(as.character(stu1$plotDate))
+# regular random effect for plot
+#rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
+# random effect at sampling unit estimates species-species associations
+rL <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
+# constraints latent factor number
+#rL$nfMin <- 2
+#rL$nfMax <- 2
 
 # presence/absence probit model
-ml <- Hmsc::Hmsc(Y = matL, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotID' = rL), distr = 'probit')
-ml <- Hmsc::sampleMcmc(ml, thin = 10, samples = 1000, transient = 500, nChains = 2, nParallel = 2)
-
+ml <- Hmsc::Hmsc(Y = matL, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotDate' = rL), distr = 'probit')
+ml <- Hmsc::sampleMcmc(ml, thin = 10, samples = 2000, transient = 500, nChains = 4, nParallel = 2)
 ml_p <- Hmsc::convertToCodaObject(ml)
-summary(ml_p$Beta)
+ml_c <- Hmsc::computeAssociations(ml, thin = 10)
 
-# evaluate
+
 coda::effectiveSize(ml_p$Beta)
 coda::gelman.diag(ml_p$Beta, multivariate = F)$psrf
 # 'Potential scale reduction factor', upper C.I. should be close to 1
 # requires that the normality of the variables should be normally distributed
 ml_pd <- Hmsc::computePredictedValues(ml, expected = F)
 Hmsc::evaluateModelFit(hM = ml, predY = ml_pd)
+ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
+# commenting out for now, should probably compare it somehow
+#ml_xv <- Hmsc::computePredictedValues(ml, partition = ml_pa, nParallel = 2)
+#Hmsc::evaluateModelFit(hM = ml, predY = ml_xv)
+
+# can we add a spatially explicit model to incorporate subplots?
+
+# figures
+hist(coda::effectiveSize(ml$Beta), main= 'ess(beta)')
+hist(coda::gelman.diag(ml$Beta, multivariate = F)$psrf, main= 'psrf(beta)')
+
+ml_pb <- getPostEstimate(ml, parName = 'Beta')
+Hmsc::plotBeta(ml, post = ml_pb, param = 'Support', supportLevel = 0.95)
+
+
+sl <- 0.5
+cp <- ((ml_c[[1]]$support > sl) + (ml_c[[1]]$support < (1 - sl)) > 0) * ml_c[[1]]$mean
+corrplot::corrplot(
+  cp, method = 'color', col = colorRampPalette(c('blue', 'white', 'red'))(200),
+  title = paste('random effect level:', ml$rLNames[1]), mar = c(0, 0, 1, 0)
+)
