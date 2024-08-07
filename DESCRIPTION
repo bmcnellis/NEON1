@@ -13,6 +13,8 @@ Imports:
     dplyr (>= 1.0.10),
     tidyr (>= 1.2.1),
     ggplot2 (>= 3.4.2),
+    viridis (>= 0.6.5),
+    terra (>= 1.7),
     neonUtilities (>= 2.2.1),
     Hmsc (>= 3.0),
     coda (>= 0.19),

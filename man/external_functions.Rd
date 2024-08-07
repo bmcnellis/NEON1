@@ -3,11 +3,6 @@
 \name{external_functions}
 \alias{external_functions}
 \alias{left_join}
-\alias{ymd_hms}
-\alias{pluck}
-\alias{map}
-\alias{map_chr}
-\alias{map_dbl}
 \title{External functions}
 \usage{
 left_join(
@@ -19,22 +14,6 @@ left_join(
   ...,
   keep = NULL
 )
-
-ymd_hms(
-  ...,
-  quiet = FALSE,
-  tz = "UTC",
-  locale = Sys.getlocale("LC_TIME"),
-  truncated = 0
-)
-
-pluck(.x, ..., .default = NULL)
-
-map(.x, .f, ..., .progress = FALSE)
-
-map_chr(.x, .f, ..., .progress = FALSE)
-
-map_dbl(.x, .f, ..., .progress = FALSE)
 }
 \description{
 NA
