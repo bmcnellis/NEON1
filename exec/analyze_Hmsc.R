@@ -2,8 +2,11 @@
 
 set.seed(1)
 
+# TODO: need to normalize/scale the cover values
+
 # Caveats:
 #     soil age is an ordered factor
+#     taxon excluded: 1 family + 210 kingdom = 211 rows, mostly not-identified
 
 ### Libraries
 library(NEON1)

@@ -1,8 +1,17 @@
 # BEM July 2024
+# updated August 2024
+
+# Last run:
 
 # Purpose: Import NEON data relevant to all the current analyses
 
-# TODO: add the beetle and structure data here
+# TODO: add data:
+#           DP1.10022.001 beetle
+#           DP1.10098.001 structure
+#           DP3.30024.001 elevation-lidar
+#           DP1.10047.001 soil-initial
+#           DP1.10086.001 soil-periodic
+#           DP1.10026.001 traits
 
 # Methods:
 #     Only uses rows identified at least to genus (excludes 211 species)
@@ -14,10 +23,29 @@ library(NEON1)
 library(neonUtilities)
 library(dplyr)
 
-### Plant diversity/percent cover data
+### Load data products
 d0 <- neonUtilities::loadByProduct('DP1.10058.001', 'PUUM', include.provisional = T, check.size = F)
-# "2024-07-24 17:03:49 HST"
+d1 <- neonUtilities::loadByProduct('DP1.10098.001', 'PUUM', include.provisional = T, check.size = F)
+d2 <- neonUtilities::loadByProduct('DP1.10047.001', 'PUUM', include.provisional = T, check.size = F)
+d3 <- neonUtilities::loadByProduct('DP1.10086.001', 'PUUM', include.provisional = T, check.size = F)
 
+### Meta-data
+
+# Species meta-data
+# Combines both 1m and 10m+ data, structure data
+spp <- d0$div_1m2Data |>
+  filter(divDataType == 'plantSpecies') |>
+  select(scientificName, taxonID, taxonRank, family, nativeStatusCode) |>
+  bind_rows(select(.data = d0$div_10m2Data100m2Data, taxonID, scientificName, taxonRank, family, nativeStatusCode)) |>
+  bind_rows(select(.data = d1$vst_mappingandtagging, taxonID, scientificName, taxonRank)) |>
+  mutate(binomialName = gsub('\\.', '', sapply(strsplit(scientificName, ' '), \(xx) paste(xx[1], xx[2], sep = '_')))) |>
+  distinct()
+# Plot meta-data
+met <- d0$div_1m2Data |>
+  select(plotID, decimalLatitude, decimalLongitude, elevation, plotType) |>
+  distinct()
+
+### Plant diversity/percent cover data
 # Plant cover data - 1m
 div_one <- d0$div_1m2Data |>
   filter(
@@ -27,26 +55,36 @@ div_one <- d0$div_1m2Data |>
   ) |>
   select(plotID, subplotID, endDate, scientificName, percentCover) |>
   distinct()
-
 # Plant cover data - 10m
 div_ten <- d0$div_10m2Data100m2Data |>
   filter(taxonRank %in% c('genus', 'species', 'subspecies', 'variety')) |>
   select(plotID, subplotID, endDate, taxonID) |>
   distinct()
 
-# Plot meta-data
-met <- d0$div_1m2Data |>
-  select(plotID, decimalLatitude, decimalLongitude, elevation, plotType) |>
+### Plant structure data
+str <- d1$vst_apparentindividual |>
+  select(date, plotID, subplotID, individualID, growthForm, plantStatus, stemDiameter, basalStemDiameter, height) |>
   distinct()
+# To derive the mapped location of each individual tree in vst_mappingandtagging, download the R
+# geoNEON package (https://github.com/NEONScience/NEON‐geolocation) and use the getLocTOS() function.
+str <- d1$vst_mappingandtagging |>
+  select(individualID, scientificName) |>
+  distinct() |>
+  # there are 7 individualIDs which have two values for 'species', just take the last entry
+  group_by(individualID) |>
+  summarise(scientificName = last(scientificName), .groups = 'drop') |>
+  left_join(str, by = 'individualID')
 
-# Species meta-data
-# Combines both 1m and 10m+ data
-spp <- d0$div_1m2Data |>
-  filter(divDataType == 'plantSpecies') |>
-  select(scientificName, taxonID, taxonRank, family, nativeStatusCode) |>
-  bind_rows(select(.data = d0$div_10m2Data100m2Data, taxonID, scientificName, taxonRank, family, nativeStatusCode)) |>
-  mutate(binomialName = gsub('\\.', '', sapply(strsplit(scientificName, ' '), \(xx) paste(xx[1], xx[2], sep = '_')))) |>
-  distinct()
+### Soil data
+soil_init <- d2$spc_biogeochem |>
+  select(
+    plotID, horizonName, biogeoCenterDepth, # unique identifiers + depth
+    ececCecd33, # cation exchange capacity
+    phCacl2, phH2o, acidity, ec12pre, # pH, pH, "acidity", EC
+    carbonTot, nitrogenTot, ctonRatio, estimatedOC, # total C, total N, C:N, organic C
+    pOxalate, MehlichIIITotP, OlsenPExtractable # phosphorus, 3 methods
+  )
+soil_peri <- d
 
 ### dhp data
 
@@ -98,3 +136,5 @@ usethis::use_data(div_ten, overwrite = T)
 usethis::use_data(met, overwrite = T)
 usethis::use_data(spp, overwrite = T)
 usethis::use_data(dhp, overwrite = T)
+usethis::use_data(str, overwrite = T)
+usethis::use_data(soil_init, overwrite = T)
