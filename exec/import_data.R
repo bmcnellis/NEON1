@@ -84,7 +84,7 @@ soil_init <- d2$spc_biogeochem |>
     carbonTot, nitrogenTot, ctonRatio, estimatedOC, # total C, total N, C:N, organic C
     pOxalate, MehlichIIITotP, OlsenPExtractable # phosphorus, 3 methods
   )
-soil_peri <- d
+soil_peri <- d3
 
 ### dhp data
 
