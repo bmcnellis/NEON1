@@ -1,17 +1,14 @@
 # BEM July 2024
 # updated August 2024
 
-# Last run:
+# Last run: "2024-08-08 10:24:52 HST"
 
 # Purpose: Import NEON data relevant to all the current analyses
 
 # TODO: add data:
-#           DP1.10022.001 beetle
-#           DP1.10098.001 structure
 #           DP3.30024.001 elevation-lidar
-#           DP1.10047.001 soil-initial
-#           DP1.10086.001 soil-periodic
 #           DP1.10026.001 traits
+# Trait data seems complicated, unsure how to connect the samples to each other
 
 # Methods:
 #     Only uses rows identified at least to genus (excludes 211 species)
@@ -23,11 +20,16 @@ library(NEON1)
 library(neonUtilities)
 library(dplyr)
 
+e1_dir <- '../spatial/AOP'
+
 ### Load data products
 d0 <- neonUtilities::loadByProduct('DP1.10058.001', 'PUUM', include.provisional = T, check.size = F)
 d1 <- neonUtilities::loadByProduct('DP1.10098.001', 'PUUM', include.provisional = T, check.size = F)
 d2 <- neonUtilities::loadByProduct('DP1.10047.001', 'PUUM', include.provisional = T, check.size = F)
 d3 <- neonUtilities::loadByProduct('DP1.10086.001', 'PUUM', include.provisional = T, check.size = F)
+d4 <- neonUtilities::loadByProduct('DP1.10026.001', 'PUUM', include.provisional = T, check.size = F)
+# DP3.30024.001 is 3.36 GB downloaded 2024-08-08 12:31 PM HST
+#e1 <- neonUtilities::byFileAOP('DP3.30024.001', 'PUUM', 2020, T, F, e1_dir)
 
 ### Meta-data
 
@@ -44,6 +46,8 @@ spp <- d0$div_1m2Data |>
 met <- d0$div_1m2Data |>
   select(plotID, decimalLatitude, decimalLongitude, elevation, plotType) |>
   distinct()
+
+# neonOS::joinTableNEON()
 
 ### Plant diversity/percent cover data
 # Plant cover data - 1m
@@ -84,7 +88,16 @@ soil_init <- d2$spc_biogeochem |>
     carbonTot, nitrogenTot, ctonRatio, estimatedOC, # total C, total N, C:N, organic C
     pOxalate, MehlichIIITotP, OlsenPExtractable # phosphorus, 3 methods
   )
-soil_peri <- d3
+soil_peri <- d3$sls_soilChemistry |>
+  # d3$ntr_externalLab and d3$sls_soilpH is detailed BGC probably not relevant to current study
+  select(plotID, collectDate, d15N, organicd13C, nitrogenPercent, organicCPercent) |>
+  group_by(plotID, collectDate) |>
+  summarise(across(everything(), ~ mean(.x, na.rm = T)), .groups = 'drop')
+
+### Trait data
+# cfc_fieldData connects all the metadata
+trait_meta <- d4$cfc_fieldData |>
+  select(plotID, collectDate, subplotID, sampleID, chlorophyllSampleID, individualID, scientificName)
 
 ### dhp data
 
@@ -138,3 +151,4 @@ usethis::use_data(spp, overwrite = T)
 usethis::use_data(dhp, overwrite = T)
 usethis::use_data(str, overwrite = T)
 usethis::use_data(soil_init, overwrite = T)
+usethis::use_data(soil_peri, overwrite = T)
