@@ -18,9 +18,14 @@
 
 library(NEON1)
 library(neonUtilities)
+#library(neonOS)
 library(dplyr)
+library(terra)
 
-e1_dir <- '../spatial/AOP'
+#e1_dir <- '../spatial/AOP'
+e1_dir <- '/media/bem/data/NEON/spatial/AOP'
+aop_dir <- 'DP3.30024.001/neon-aop-products/2020/FullSite/D20/2020_PUUM_2/L3/DiscreteLidar/DTMGtif'
+aop_fl <- '/media/bem/data/NEON/spatial/aop_elev_mosaic.tif'
 
 ### Load data products
 d0 <- neonUtilities::loadByProduct('DP1.10058.001', 'PUUM', include.provisional = T, check.size = F)
@@ -30,6 +35,33 @@ d3 <- neonUtilities::loadByProduct('DP1.10086.001', 'PUUM', include.provisional 
 d4 <- neonUtilities::loadByProduct('DP1.10026.001', 'PUUM', include.provisional = T, check.size = F)
 # DP3.30024.001 is 3.36 GB downloaded 2024-08-08 12:31 PM HST
 #e1 <- neonUtilities::byFileAOP('DP3.30024.001', 'PUUM', 2020, T, F, e1_dir)
+
+### Elevation DTM
+if (!file.exists(aop_fl)) {
+  tif_fls <- list.files(file.path(e1_dir, aop_dir), full.names = T)
+  # mosaic all the files
+  dtm <- terra::rast()
+  for (i in seq_along(tif_fls)) {
+    ii <- tif_fls[i]
+    cat(paste0('\rprogress: ', round(i / length(tif_fls) * 100), rep(' ', 10)))
+    irast <- terra::rast(ii)
+
+    if (i == 1) {
+      dtm <- irast
+    } else {
+      dtm <- terra::mosaic(dtm, irast)
+    }
+
+    if (i %% 100 == 0) {
+      terra::writeRaster(dtm, aop_fl, overwrite = T, filetype = 'GTiff')
+    }
+
+  }
+
+  terra::writeRaster(dtm, aop_fl, overwrite = T, filetype = 'GTiff')
+} else {
+  dtm <- terra::rast(aop_fl)
+}
 
 ### Meta-data
 
