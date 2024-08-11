@@ -93,3 +93,5 @@ res <- res[!duplicated(res), ]
 
 topo <- res
 usethis::use_data(topo)
+
+file.remove(list.files(td, full.names = T))
