@@ -32,7 +32,10 @@ plots <- terra::project(plots, crs(fence))
 
 # add fence data to plot data and re-save
 met$enclosure_name <- terra::extract(met_fence, plots)$enclosure_name
-usethis::use_data(met, overwrite = T)
+#usethis::use_data(met, overwrite = T)
+fence <- met[, c('plotID', 'enclosure_name')]
+fence <- fence[!duplicated(fence), ]
+usethis::use_data(fence, overwrite = T)
 fence0 <- met_fence
 met_fence <- as.data.frame(met_fence)
 usethis::use_data(met_fence, overwrite = T)
