@@ -1,3 +1,6 @@
+# BEM
+# updated August 2024
+
 library(terra)
 library(sf)
 library(ggplot2)
@@ -45,6 +48,13 @@ flow_meta <- flow[unlist(st_within(plots, flow)), c('strat_code', 'symbol', 'age
 flow_meta <- st_drop_geometry(flow_meta)
 flow_meta <- data.frame(plotID = st_drop_geometry(plots$Name_2), flow_meta)
 row.names(flow_meta) <- NULL
+# set flow meta median based on provided age range
+flow_meta$age_median <- rep(NA, nrow(flow_meta))
+flow_meta$age_median <- ifelse(flow_meta$age_range == '750-1,500 yr', 1125, flow_meta$age_median)
+flow_meta$age_median <- ifelse(flow_meta$age_range == '1,500-3,000 yr', 2250, flow_meta$age_median)
+flow_meta$age_median <- ifelse(flow_meta$age_range == '200-750 yr', 475, flow_meta$age_median)
+flow_meta$age_median <- ifelse(flow_meta$age_range == '3,000-5,000 yr', 4000, flow_meta$age_median)
+flow_meta$age_median <- ifelse(flow_meta$age_range == '5,000-11,000 yr', 8000, flow_meta$age_median)
 usethis::use_data(flow_meta, overwrite = T)
 
 tower <- st_read(file.path(shp_dir, 'PUUM_Tower', 'Tower.shp'))

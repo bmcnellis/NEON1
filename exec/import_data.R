@@ -21,6 +21,8 @@ library(neonUtilities)
 #library(neonOS)
 library(dplyr)
 
+# Note: flow data is imported in make_map_figure.R
+
 ### Load data products
 d0 <- neonUtilities::loadByProduct('DP1.10058.001', 'PUUM', include.provisional = T, check.size = F)
 d1 <- neonUtilities::loadByProduct('DP1.10098.001', 'PUUM', include.provisional = T, check.size = F)

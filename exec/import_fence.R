@@ -1,4 +1,6 @@
 # BEM Nov 2023
+# updated Aug 2024
+
 library(NEON1)
 library(terra)
 library(viridis)

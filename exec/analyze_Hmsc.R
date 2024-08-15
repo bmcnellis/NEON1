@@ -3,10 +3,17 @@
 set.seed(1)
 
 # TODO: need to normalize/scale the cover values
+#       break this into prepare_Hmsc and analyze_Hmsc after first model draft
+#       add computeVariancePartioning to the workflow
 
 # Caveats:
-#     soil age is an ordered factor
-#     taxon excluded: 1 family + 210 kingdom = 211 rows, mostly not-identified
+#     * soil age is an ordered factor
+#     * taxon excluded: 1 family + 210 kingdom = 211 rows, mostly not-identified
+#     * two enclosures (Kata-Stein & Unencumbered Kulani Pasture) had NA for completion date, this
+#       was set to 2014 which is the age of the youngest bordering enclosure
+#     * lava flow age is the median of the age range published on USGS maps
+#     * cpai, elev, TWI, age_median are centered and scaled
+#     * time_since_fence NOT centered or scaled
 
 ### Libraries
 library(NEON1)
@@ -45,9 +52,18 @@ df0 <- NEON1::div_one |>
   mutate(plotDate = paste0(gsub('PUUM_', '', plotID), as.character(endDate), sep = '_')) |>
   mutate(ageFactor = as.factor(paste0('G:', age_group - 1, '_', age_range))) |>
   rename('nativeFactor' = nat_fac) |>
-  select(plotDate, plotID, endDate, binomialName, percentCover, ageFactor, nativeFactor, pai, fcover, fipar) |>
+  select(plotDate, plotID, endDate, binomialName, percentCover, ageFactor, age_median, nativeFactor, pai, fcover, fipar) |>
   mutate(logicalCover = ifelse(percentCover < 0.0001, FALSE, TRUE)) |>
   mutate(fractionCover = percentCover / 100) |>
+  left_join(NEON1::fence, by = 'plotID') |>
+  left_join(NEON1::met_fence[, c('enclosure_name', 'enclosure_completed', 'enclosure_ung_free')], by = 'enclosure_name') |>
+  # set two NA enclosures to 2014, which is the youngest neighboring enclosure
+  mutate(enclosure_completed = ifelse(is.na(enclosure_completed), 2014, enclosure_completed)) |>
+  mutate(time_since_fence = 2024 - enclosure_completed) |>
+  left_join(NEON1::topo[, c('plotID', 'elev', 'TWI')], by = 'plotID') |>
+  # center and scale pai, elev, TWI, age_median
+  # the as.numeric is because Hmsc doesnt like the scale() Value type
+  mutate(pai = as.numeric(scale(pai)), elev = as.numeric(scale(elev)), TWI = as.numeric(scale(TWI)), age_median = as.numeric(scale(age_median))) |>
   distinct()
 rm(inv_nat)
 
@@ -67,7 +83,7 @@ mat_f <- mat_0 |>
   apply(c(1, 2), \(xx) ifelse(is.na(xx), NA, NEON1::logit_Warton(xx)))
 # create environmental matrix
 env1 <- df0 |>
-  select(c(plotDate, ageFactor, pai)) |>
+  select(c(plotDate, age_median, pai, time_since_fence, elev, TWI)) |>
   arrange(plotDate) |>
   distinct() |>
   as.data.frame()
@@ -99,13 +115,21 @@ env1 <- env1 |>
 # check distribution of effects and covariates
 hist(env1$pai, breaks = 30)
 # pai looks bimodal
-hist(as.numeric(env1$ageFactor), breaks = 30)
+#hist(as.numeric(env1$ageFactor), breaks = 30)
+hist(env1$age_median, breaks = 30)
 # soil age looks lognormal
+hist(env1$time_since_fence, breaks = 30)
+# not very normal
+hist(env1$elev, breaks = 30)
+# super bimodal
+hist(env1$TWI, breaks = 30)
+# mostly normal
 
 # modelling
+# kable(VP$R2T$Beta), where VP is the result of computeVariancePartitioning
 
 # fixed-effects
-xf1 <- as.formula(~ ageFactor + pai)
+xf1 <- as.formula(~ age_median + pai + time_since_fence + elev*TWI)
 # random effects
 #rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 # random effect at sampling unit estimates species-species associations
@@ -134,7 +158,7 @@ if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
 # Beta = species niches, Gamma = traits on niches, Omega = residual species associations, rho = phylogenetic signal
 
 # presence/absence probit model
-# Beta and Omega are in this model
+# Beta and Omega are in this model, could maybe figure out traits later
 if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
   mf_p <- Hmsc::evaluateModelFit(hM = m_p, predY = mp_p)
   es_p_beta <- coda::effectiveSize(mc_p$Beta)
