@@ -5,6 +5,7 @@ set.seed(1)
 # TODO: need to normalize/scale the cover values
 #       break this into prepare_Hmsc and analyze_Hmsc after first model draft
 #       add computeVariancePartioning to the workflow
+#       should some species be excluded based on ESS?
 
 # Caveats:
 #     * soil age is an ordered factor
