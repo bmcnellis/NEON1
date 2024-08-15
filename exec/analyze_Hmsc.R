@@ -26,7 +26,8 @@ library(Hmsc)
 data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
 resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
 #mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results'
-mod_dir <- '/media/bem/data/NEON/results/model_results'
+#mod_dir <- '/media/bem/data/NEON/results/model_results'
+mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results_14Aug2024'
 
 ### Data import
 
@@ -176,13 +177,17 @@ if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
   load(file.path(mod_dir, 'm_p_diag.rda'))
 }
 
-hist(mf_p$R2, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$R2), 2)))
+hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)))
+# RMSE for probit, R2 for others
 hist(es_p_beta, breaks = 30, main = 'ess:Beta, model p')
 #hist(es_p_gamm, breaks = 30, main = 'ess:Gamma, model p')
 hist(es_p_omeg, breaks = 30, main = 'ess:Omega, model p')
 hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
+table(abs(gd_p_beta[, 1] - 1) > 0.02)
 #hist(gd_p_gamm, breaks = 30, main = 'psrf:Gamma, model p')
 hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
+hist(gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.05), 1], breaks = 30)
+table(abs(gd_p_omeg[, 1] - 1) > 0.05)
 
 # cross-validation
 #ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
@@ -195,9 +200,9 @@ hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
 # figures
 
 
-ml_pb <- getPostEstimate(ml, parName = 'Beta')
-Hmsc::plotBeta(ml, post = ml_pb, param = 'Support', supportLevel = 0.95)
-
+ml_pb <- getPostEstimate(m_p, parName = 'Beta')
+#plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.95)
+NEON1::plotBeta_modified(m_p, ml_pb, 'Support')
 
 # i think this is now ma_p
 sl <- 0.5

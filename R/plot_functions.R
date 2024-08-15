@@ -113,3 +113,33 @@ NMDS_screeplot <- function(mat, kmax = 10) {
   return(p0)
 
 }
+#' @rdname plot_functions
+#' @export
+plotBeta_modified <- function(hM, post, param = "Support") {
+
+  betaP <- post$support
+  toPlot <- switch(param, Sign = sign(post$mean), Mean = post$mean, Support = 2 * betaP - 1, stop('bad param'))
+  toPlot <- toPlot * ((betaP > 0.95) + (betaP < (1 - 0.95)) > 0)
+  betaMat <- matrix(toPlot, nrow = hM$nc, ncol = ncol(hM$Y))
+
+  rownames(betaMat) <- sapply(seq_along(hM$ns), \(xx) paste(hM$covNames[xx], sprintf("(C%d)", xx)))
+  colnames(betaMat) <- sapply(seq_along(hM$ns), \(xx) paste(hM$spNames[xx], sprintf("(S%d)", xx)))
+
+  X <- t(betaMat[1:hM$nc, rev(1:ncol(hM$Y))])
+
+  if (all(is.na(X)) || sum(abs(X)) == 0) {
+    warning("nothing to plot at this level of posterior support")
+    zlim <- c(-1, 1)
+  }
+  else {
+    zlim <- c(-max(abs(range(X))), max(abs(range(X))))
+  }
+
+  a0 <-  ifelse(param == "Sign", list(labels = c("+", "0", "-"), at = c(1, 0, -1), hadj = 1), list(hadj = 1))
+
+  image.plot(
+    x = seq(0 + 1/(ncol(X) * 4), 0.65 - 1/(ncol(X) * 4), by = ((0.65 - 1/(ncol(X) * 4)) - (0 + 1/(ncol(X) * 4)))/(ncol(X) - 1)),
+    y = seq(1/(nrow(X) * 4), 1 - 1/(nrow(X) * 4), length.out = nrow(X)),
+    z = t(X), axis.args = a0, zlim = zlim
+  )
+}
