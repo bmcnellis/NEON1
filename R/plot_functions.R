@@ -117,29 +117,41 @@ NMDS_screeplot <- function(mat, kmax = 10) {
 #' @export
 plotBeta_modified <- function(hM, post, param = "Support") {
 
-  betaP <- post$support
-  toPlot <- switch(param, Sign = sign(post$mean), Mean = post$mean, Support = 2 * betaP - 1, stop('bad param'))
-  toPlot <- toPlot * ((betaP > 0.95) + (betaP < (1 - 0.95)) > 0)
-  betaMat <- matrix(toPlot, nrow = hM$nc, ncol = ncol(hM$Y))
+  require(ggplot2)
 
-  rownames(betaMat) <- sapply(seq_along(hM$ns), \(xx) paste(hM$covNames[xx], sprintf("(C%d)", xx)))
-  colnames(betaMat) <- sapply(seq_along(hM$ns), \(xx) paste(hM$spNames[xx], sprintf("(S%d)", xx)))
+  #betaP <- post$support
+  #toPlot <- switch(param, Sign = sign(post$mean), Mean = post$mean, Support = 2 * betaP - 1, stop('bad param'))
+  #toPlot <- toPlot * ((betaP > 0.95) + (betaP < (1 - 0.95)) > 0)
+  #betaMat <- matrix(toPlot, nrow = hM$nc, ncol = ncol(hM$Y))
+  #rownames(betaMat) <- hM$covNames
+  #colnames(betaMat) <- hM$spNames
+  #X <- t(betaMat[1:hM$nc, rev(1:ncol(hM$Y))])
 
-  X <- t(betaMat[1:hM$nc, rev(1:ncol(hM$Y))])
+  pp <- ifelse(abs(post$support) < 0.9, NA, post$mean)
+  pp <- pp[, colSums(is.na(pp)) < 7]
+  pp <- data.frame(hM$covNames, pp)
+  pp <- tidyr::pivot_longer(pp, cols = 2:ncol(pp), values_to = 'effect', names_to = 'spp')
+  pp <- pp[complete.cases(pp), ]
+  pp$spp <- sapply(strsplit(pp$spp, '_'), \(xx) xx[1])
+  pp <- dplyr::group_by(pp, hM.covNames, spp)
+  pp <- dplyr::summarise(pp, effect = mean(effect, na.rm = T), .groups = 'drop')
+  pp <- pp[which(!pp$hM.covNames %in% c('(Intercept)', 'elev:TWI', 'time_since_fence')), ]
 
-  if (all(is.na(X)) || sum(abs(X)) == 0) {
-    warning("nothing to plot at this level of posterior support")
-    zlim <- c(-1, 1)
-  }
-  else {
-    zlim <- c(-max(abs(range(X))), max(abs(range(X))))
-  }
+  pp$hM.covNames <- ifelse(pp$hM.covNames == 'age_median', 'Flow age', pp$hM.covNames)
+  pp$hM.covNames <- ifelse(pp$hM.covNames == 'elev', 'Elevation', pp$hM.covNames)
+  pp$hM.covNames <- ifelse(pp$hM.covNames == 'pai', 'Light stress', pp$hM.covNames)
+  pp$hM.covNames <- ifelse(pp$hM.covNames == 'time_since_fence', 'Pig fence age', pp$hM.covNames)
+  pp$hM.covNames <- ifelse(pp$hM.covNames == 'TWI', 'Topographic run-in', pp$hM.covNames)
 
-  a0 <-  ifelse(param == "Sign", list(labels = c("+", "0", "-"), at = c(1, 0, -1), hadj = 1), list(hadj = 1))
+  ggplot(data = pp, aes(x = spp, y = effect)) +
+    geom_point(size = 2.5) +
+    facet_wrap(~ hM.covNames, scales = 'free_x') +
 
-  image.plot(
-    x = seq(0 + 1/(ncol(X) * 4), 0.65 - 1/(ncol(X) * 4), by = ((0.65 - 1/(ncol(X) * 4)) - (0 + 1/(ncol(X) * 4)))/(ncol(X) - 1)),
-    y = seq(1/(nrow(X) * 4), 1 - 1/(nrow(X) * 4), length.out = nrow(X)),
-    z = t(X), axis.args = a0, zlim = zlim
-  )
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(color = 'black', angle = 45, hjust = 1, size = 6),
+      axis.text.y = element_text(color = 'black')
+    ) +
+    labs(y = 'Relative effect on plant presence', x = '')
+
 }

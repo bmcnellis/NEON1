@@ -25,6 +25,7 @@ library(Hmsc)
 #data_dir <- '/media/bem/data/NEON'
 data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
 resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
+res_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results'
 #mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results'
 #mod_dir <- '/media/bem/data/NEON/results/model_results'
 mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results_14Aug2024'
@@ -197,12 +198,17 @@ table(abs(gd_p_omeg[, 1] - 1) > 0.05)
 
 # can we add a spatially explicit model to incorporate subplots?
 
+# make a pp_check function
+# or write a pp_check.Hmsc method for bayesplot??
+
 # figures
 
 
 ml_pb <- getPostEstimate(m_p, parName = 'Beta')
 #plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.95)
+png(file.path(res_dir, 'model_results_July.png'), width = 8, height = 4.5, units = 'in', res = 150)
 NEON1::plotBeta_modified(m_p, ml_pb, 'Support')
+dev.off()
 
 # i think this is now ma_p
 sl <- 0.5
