@@ -187,3 +187,48 @@ sph <- function(vec) {
   data.frame(val = v, err = e)
 
 }
+#' @rdname helpers
+#' @export
+order_to_class <- function() {
+  # https://en.wikipedia.org/wiki/List_of_plant_orders
+  o_t_c <- data.frame(
+    order = c(
+      'Apiales', 'Aquifoliales', 'Arecales', 'Asparagales', 'Asterales',
+      'Caryophyllales', 'Celastrales', 'Cornales', 'Cyatheales', 'Ericales',
+      'eupolypod II', 'Fabales', 'Gentianales', 'Geraniales', 'Gleicheniales',
+      'Hymenophyllales', 'Hypnales', 'Lamiales', 'Liliales', 'Lycopodiales',
+      'Malpighiales', 'Malvales', 'Marattiales', 'Myrtales', 'Ophioglossales',
+      'Pandanales', 'Piperales', 'Poales', 'Polypodiales', 'Polypodiales-eupolypod I',
+      'Polypodiales-eupolypod II', 'Rosales', 'Santalales', 'Sapindales'
+    ),
+    superorder = c(
+      'Asteranae', 'Asteranae', 'Commelinids', 'Orchidanae', 'Asteranae',
+      'Caryophyllanae', 'Rosanae', 'Cornanae', 'Cyatheales', 'Ericanae',
+      'Polypodiales', 'Rosanae', 'Lamianae', 'Myrtanae', 'Gleicheniales',
+      'Hymenophyllales', 'Hypnanae', 'Lamianae', 'Lilianae', 'Lycopodiales',
+      'Rosanae', 'Myrtanae', 'Marattiales', 'Myrtanae', 'Ophioglossales',
+      'Pandananae', 'Piperales', 'Commelinids', 'Polypodiales', 'Polypodiales',
+      'Polypodiales', 'Rosanae', 'Santalanae ', 'Myrtanae'
+    ),
+    subclass = c(
+      'Asteridae', 'Asteridae', 'Liliidae', 'Liliidae', 'Asteridae',
+      'Asteridae', 'Rosidae', 'Asteridae', 'Polypodiidae', 'Asteridae',
+      'Polypodiidae', 'Rosidae', 'Asteridae', 'Rosidae', 'Polypodiidae',
+      'Polypodiidae', 'Bryidae', 'Asteridae', 'Liliidae', 'Lycopodiidae',
+      'Rosidae', 'Rosidae', 'Marattiopsida', 'Rosidae', 'Ophioglossidae',
+      'Liliidae', 'Magnoliidae', 'Liliidae', 'Polypodiidae', 'Polypodiidae',
+      'Polypodiidae', 'Rosidae', 'Asteridae', 'Rosidae'
+    ),
+    class = c(
+      'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida',
+      'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida', 'Polypodiopsida', 'Magnoliopsida',
+      'Polypodiopsida', 'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida', 'Polypodiopsida',
+      'Polypodiopsida', 'Bryopsida', 'Magnoliopsida', 'Magnoliopsida', 'Lycopodiopsida',
+      'Magnoliopsida', 'Magnoliopsida', 'Polypodiopsida', 'Magnoliopsida', 'Polypodiopsida',
+      'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida', 'Polypodiopsida', 'Polypodiopsida',
+      'Polypodiopsida', 'Magnoliopsida', 'Magnoliopsida', 'Magnoliopsida'
+    )
+  )
+
+  return(o_t_c)
+}

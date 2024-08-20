@@ -33,6 +33,14 @@ mod_dir <- '/media/bem/data/NEON/results/model_results'
 
 ### Data import
 
+tax <- NEON1::spp |>
+  select(-c(taxonID, scientificName)) |>
+  na.omit() |>
+  mutate(genus = sapply(strsplit(binomialName, '_'), \(xx) xx[1])) |>
+  left_join(taxize::apg_families[, c('family', 'order')], by = 'family') |>
+  mutate(order = ifelse(family == 'Leskeaceae', 'Hypnales', order)) |>
+  left_join(NEON1::order_to_class(), by = 'order') |>
+  mutate(across(everything(), as.factor))
 inv_nat <- NEON1::spp |>
   select(c(binomialName, nativeStatusCode)) |>
   filter(!is.na(nativeStatusCode)) |>
@@ -109,6 +117,7 @@ tr1 <- NEON1::spp |>
   tibble::column_to_rownames('binomialName') |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'NI?', 'N', nativeStatusCode)) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'UNK', 'N', nativeStatusCode))
+tax <- ape::as.phylo(~class/subclass/superorder/order/family/genus/binomialName, data = tax)
 
 # check matrix/df alignment and modify for modelling
 stopifnot(
@@ -157,7 +166,7 @@ rL$nfMax <- 2
 # presence/absence probit model
 if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
   m_p <- Hmsc::Hmsc(
-    Y = mat_p, XData = env1, XFormula = xf1, studyDesign = stu1, TrData = tr1,
+    Y = mat_p, XData = env1, XFormula = xf1, studyDesign = stu1, TrData = tr1, phyloTree = tax,
     ranLevels = list('plotDate' = rL), distr = 'probit', TrFormula = ~nativeStatusCode,
     XScale = F
   )
