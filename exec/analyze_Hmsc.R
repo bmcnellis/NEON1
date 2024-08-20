@@ -22,13 +22,14 @@ library(dplyr)
 library(Hmsc)
 
 ### Directories
-#data_dir <- '/media/bem/data/NEON'
-data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
-resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
-res_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results'
-#mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results'
-#mod_dir <- '/media/bem/data/NEON/results/model_results'
-mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results_14Aug2024'
+data_dir <- '/media/bem/data/NEON'
+#data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
+#resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
+resid_dir <- '/media/bem/data/results/reports'
+#res_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results'
+res_dir <- '/media/bem/data/NEON/results'
+mod_dir <- '/media/bem/data/NEON/results/model_results'
+#mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results_14Aug2024'
 
 ### Data import
 
@@ -100,6 +101,14 @@ stu1 <- df0 |>
   select(plotDate, plotID, dateFactor) |>
   distinct() |>
   as.data.frame()
+tr1 <- NEON1::spp |>
+  select(binomialName, nativeStatusCode) |>
+  distinct() |>
+  filter(binomialName %in% colnames(mat_p)) |>
+  arrange(binomialName) |>
+  tibble::column_to_rownames('binomialName') |>
+  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'NI?', 'N', nativeStatusCode)) |>
+  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'UNK', 'N', nativeStatusCode))
 
 # check matrix/df alignment and modify for modelling
 stopifnot(
@@ -108,7 +117,10 @@ stopifnot(
   nrow(mat_f) == nrow(stu1),
   identical(row.names(mat_f), row.names(mat_p)),
   identical(row.names(mat_f), env1$plotDate),
-  identical(row.names(mat_f), as.character(stu1$plotDate))
+  identical(row.names(mat_f), as.character(stu1$plotDate)),
+  all(colnames(mat_p) %in% row.names(tr1)),
+  all(row.names(tr1) %in% colnames(mat_p)),
+  identical(row.names(tr1), colnames(mat_p))
 )
 mat_f <- mat_f |>
   `rownames<-`(NULL)
@@ -144,7 +156,11 @@ rL$nfMax <- 2
 # fit
 # presence/absence probit model
 if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
-  m_p <- Hmsc::Hmsc(Y = mat_p, XData = env1, XFormula = xf1, studyDesign = stu1, ranLevels = list('plotDate' = rL), distr = 'probit')
+  m_p <- Hmsc::Hmsc(
+    Y = mat_p, XData = env1, XFormula = xf1, studyDesign = stu1, TrData = tr1,
+    ranLevels = list('plotDate' = rL), distr = 'probit', TrFormula = ~nativeStatusCode,
+    XScale = F
+  )
   m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 5000, transient = 1000, nChains = 4, nParallel = 4)
   mc_p <- Hmsc::convertToCodaObject(m_p)
   ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
@@ -163,17 +179,24 @@ if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
 # presence/absence probit model
 # Beta and Omega are in this model, could maybe figure out traits later
 if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
+
   mf_p <- Hmsc::evaluateModelFit(hM = m_p, predY = mp_p)
+  m_vp <- Hmsc::computeVariancePartitioning(m_p)
+
   es_p_beta <- coda::effectiveSize(mc_p$Beta)
   #es_p_gamm <- coda::effectiveSize(mc_p$Gamma)
   es_p_omeg <- coda::effectiveSize(mc_p$Omega[[1]])
+
   gd_p_beta <- coda::gelman.diag(mc_p$Beta, multivariate = F)$psrf
   #gd_p_gamm <- coda::gelman.diag(mc_p$Gamma, multivariate = F)$psrf
   gd_p_omeg <- coda::gelman.diag(mc_p$Omega[[1]], multivariate = F)$psrf
+
   mpe_p_beta <- Hmsc::getPostEstimate(m_p, parName = 'Beta')
   #mpe_p_gamm <- Hmsc::getPostEstimate(m_p, parName = 'Gamma')
   mpe_p_omeg <- Hmsc::getPostEstimate(m_p, parName = 'Omega')
-  save(list = c('mf_p', 'es_p_beta', 'es_p_omeg', 'gd_p_beta', 'gd_p_omeg', 'mpe_p_beta', 'mpe_p_omeg'), file = file.path(mod_dir, 'm_p_diag.rda'))
+
+  save(list = c('mf_p', 'm_vp', 'es_p_beta', 'es_p_omeg', 'gd_p_beta', 'gd_p_omeg', 'mpe_p_beta', 'mpe_p_omeg'), file = file.path(mod_dir, 'm_p_diag.rda'))
+
 } else {
   load(file.path(mod_dir, 'm_p_diag.rda'))
 }
