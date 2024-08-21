@@ -75,9 +75,11 @@ df0 <- NEON1::div_one |>
   mutate(enclosure_completed = ifelse(is.na(enclosure_completed), 2014, enclosure_completed)) |>
   mutate(time_since_fence = 2024 - enclosure_completed) |>
   left_join(NEON1::topo[, c('plotID', 'elev', 'TWI')], by = 'plotID') |>
+  left_join(NEON1::lus, by = 'plotID') |>
   # center and scale pai, elev, TWI, age_median
   # the as.numeric is because Hmsc doesnt like the scale() Value type
   mutate(pai = as.numeric(scale(pai)), elev = as.numeric(scale(elev)), TWI = as.numeric(scale(TWI)), age_median = as.numeric(scale(age_median))) |>
+  mutate(cover_type = as.factor(cover_type)) |>
   distinct()
 rm(inv_nat)
 
@@ -106,7 +108,7 @@ mat_f <- mat_0 |>
   apply(c(1, 2), \(xx) ifelse(is.na(xx), NA, NEON1::logit_Warton(xx)))
 # create environmental matrix
 env1 <- df0 |>
-  select(c(plotDate, age_median, pai, time_since_fence, elev, TWI)) |>
+  select(c(plotDate, age_median, pai, time_since_fence, elev, cover_type, log, cow, pig)) |>
   arrange(plotDate) |>
   distinct() |>
   as.data.frame()
@@ -147,7 +149,7 @@ stopifnot(
 # last step fixes
 rownames(mat_f) <- NULL
 env1 <- env1[, -which(colnames(env1) == 'plotDate'), drop = F]
-env1 <- withint(env1, rm(plotDate))
+env1 <- within(env1, rm(plotDate))
 # i think skip the reduced-rank part
 #rr1 <- stu1[, 'plotDate', drop = F]
 
@@ -161,14 +163,12 @@ hist(env1$time_since_fence, breaks = 30)
 # not very normal
 hist(env1$elev, breaks = 30)
 # super bimodal
-hist(env1$TWI, breaks = 30)
-# mostly normal
 
 # modelling
 # kable(VP$R2T$Beta), where VP is the result of computeVariancePartitioning
 
 # fixed-effects
-xf1 <- as.formula(~ age_median + pai + time_since_fence + elev*TWI)
+xf1 <- as.formula(~ age_median + pai + time_since_fence + elev + cover_type + log + cow + pig)
 # random effects
 #rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
 # random effect at sampling unit estimates species-species associations
