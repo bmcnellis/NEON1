@@ -37,10 +37,13 @@ met$enclosure_name <- terra::extract(met_fence, plots)$enclosure_name
 #usethis::use_data(met, overwrite = T)
 fence <- met[, c('plotID', 'enclosure_name')]
 fence <- fence[!duplicated(fence), ]
-usethis::use_data(fence, overwrite = T)
+#usethis::use_data(fence, overwrite = T)
 fence0 <- met_fence
 met_fence <- as.data.frame(met_fence)
-usethis::use_data(met_fence, overwrite = T)
+fence <- dplyr::left_join(fence, met_fence, by = 'enclosure_name')
+fence$enclosure_ung_free <- ifelse(fence$enclosure_ung_free == 'Yes', TRUE, FALSE)
+fence <- within(fence, rm(enclosure_ingress))
+usethis::use_data(fence, overwrite = T)
 
 # make plots
 

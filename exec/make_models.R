@@ -2,19 +2,16 @@
 
 set.seed(1)
 
-# TODO: need to normalize/scale the cover values
-#       break this into prepare_Hmsc and analyze_Hmsc after first model draft
-#       add computeVariancePartioning to the workflow
-#       should some species be excluded based on ESS?
+# TODO:
 
-# Caveats:
-#     * soil age is an ordered factor
-#     * taxon excluded: 1 family + 210 kingdom = 211 rows, mostly not-identified
+# Caveats/Considerations:
+#     * taxon not identified to species are excluded
 #     * two enclosures (Kata-Stein & Unencumbered Kulani Pasture) had NA for completion date, this
 #       was set to 2014 which is the age of the youngest bordering enclosure
 #     * lava flow age is the median of the age range published on USGS maps
-#     * cpai, elev, TWI, age_median are centered and scaled
+#     * pai, elev, age_median are centered and scaled
 #     * time_since_fence NOT centered or scaled
+#     * one enclosure (Army Road) was listed as NOT ungulate-free, time_since_fence set to 0
 
 # "All variance partitioning values for each species were multiplied by the explanatory R2 value of that species to show amount
 # of total variation in the response variable explained by each covariate."
@@ -26,34 +23,27 @@ library(Hmsc)
 
 ### Directories
 data_dir <- '/media/bem/data/NEON'
-#data_dir <- 'C:/Users/BrandonMcNellis/Documents/NEON_data'
-#resid_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
 resid_dir <- '/media/bem/data/results/reports'
-#res_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results'
 res_dir <- '/media/bem/data/NEON/results'
 mod_dir <- '/media/bem/data/NEON/results/model_results'
-#mod_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/model_results_14Aug2024'
 
 ### Data import
 
-#tax <- NEON1::spp |>
-#  select(-c(taxonID, scientificName)) |>
-#  na.omit() |>
-#  mutate(genus = sapply(strsplit(binomialName, '_'), \(xx) xx[1])) |>
-#  left_join(taxize::apg_families[, c('family', 'order')], by = 'family') |>
-#  mutate(order = ifelse(family == 'Leskeaceae', 'Hypnales', order)) |>
-#  left_join(NEON1::order_to_class(), by = 'order') |>
-#  mutate(across(everything(), as.factor))
-# taxonomy part doesnt work
 inv_nat <- NEON1::spp |>
   select(c(binomialName, nativeStatusCode)) |>
   filter(!is.na(nativeStatusCode)) |>
-  mutate(nativeBinary = ifelse(nativeStatusCode == 'I', 'I', 'N')) |>
-  select(-nativeStatusCode) |>
-  mutate(nat_fac = as.factor(nativeBinary)) |>
+  distinct()
+fence <- NEON1::fence |>
+  mutate(enclosure_completed = ifelse(enclosure_name == 'Kata-Stein', 2014, enclosure_completed)) |>
+  mutate(time_since_fence = 2024 - enclosure_completed) |>
+  mutate(time_since_fence = ifelse(enclosure_name == 'Army Road', 0, time_since_fence)) |>
+  mutate(time_since_fence = ifelse(is.na(time_since_fence), 0, time_since_fence)) |>
+  select(c(plotID, time_since_fence)) |>
   distinct()
 df0 <- NEON1::div_one |>
+  # convert scientificName to binomialName
   left_join(NEON1::spp, by = 'scientificName') |>
+  # pivot the dataframe to fill in 0's, then aggregate across subplots
   select(c(plotID, subplotID, endDate, binomialName, percentCover)) |>
   tidyr::pivot_wider(names_from = binomialName, values_from = percentCover, values_fn = mean) |>
   tidyr::pivot_longer(cols = -c(1:3), names_to = 'binomialName', values_to = 'percentCover') |>
@@ -61,130 +51,79 @@ df0 <- NEON1::div_one |>
   select(-subplotID) |>
   group_by(plotID, endDate, binomialName) |>
   summarise(percentCover = mean(percentCover, na.rm = T), .groups = 'drop') |>
+  # join the other relevant data
   left_join(inv_nat, by = 'binomialName') |>
-  left_join(NEON1::flow_meta, by = 'plotID') |>
-  left_join(NEON1::dhp, by = 'plotID') |>
-  left_join(NEON1::met, by = 'plotID') |>
+  left_join(fence, by = 'plotID') |>
+  left_join(NEON1::met[, c('plotID', 'elevation', 'decimalLatitude', 'decimalLongitude')], by = 'plotID') |>
+  left_join(NEON1::flow_meta[, c('plotID','age_median')], by = 'plotID') |>
+  left_join(NEON1::dhp[, c('plotID', 'pai')], by = 'plotID') |>
+  left_join(NEON1::lus, by = 'plotID') |>
+  # add data from mutates
   mutate(plotDate = paste(plotID, as.character(endDate), sep = '_')) |>
   mutate(plotDate = gsub('PUUM_', '', plotDate)) |>
-  mutate(ageFactor = as.factor(paste0('G:', age_group - 1, '_', age_range))) |>
-  rename('nativeFactor' = nat_fac) |>
-  select(plotDate, plotID, endDate, decimalLatitude, decimalLongitude, binomialName, percentCover, ageFactor, age_median, nativeFactor, pai, fcover, fipar) |>
   mutate(date_day_center = as.integer(round(scale(as.numeric(endDate) / 86400, scale = F)))) |>
-  mutate(logicalCover = ifelse(percentCover < 0.0001, FALSE, TRUE)) |>
-  mutate(fractionCover = percentCover / 100) |>
-  left_join(NEON1::fence, by = 'plotID') |>
-  left_join(NEON1::met_fence[, c('enclosure_name', 'enclosure_completed', 'enclosure_ung_free')], by = 'enclosure_name') |>
-  # set two NA enclosures to 2014, which is the youngest neighboring enclosure
-  mutate(enclosure_completed = ifelse(is.na(enclosure_completed), 2014, enclosure_completed)) |>
-  mutate(time_since_fence = 2024 - enclosure_completed) |>
-  left_join(NEON1::topo[, c('plotID', 'elev', 'TWI')], by = 'plotID') |>
-  left_join(NEON1::lus, by = 'plotID') |>
-  # center and scale pai, elev, TWI, age_median
-  # the as.numeric is because Hmsc doesnt like the scale() Value type
-  mutate(pai = as.numeric(scale(pai)), elev = as.numeric(scale(elev)), TWI = as.numeric(scale(TWI)), age_median = as.numeric(scale(age_median))) |>
-  mutate(lon = scale(decimalLongitude, scale = F), lat = scale(decimalLatitude, scale = F)) |>
-  mutate(cover_type = as.factor(cover_type)) |>
+  # drop species which are not identified to species
+  filter(!grepl('_sp|_spp', binomialName)) |>
+  # assume all NI? are N
+  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'NI?', 'N', 'I')) |>
+  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
+  # center/scale and fix for Hmsc inputs
+  mutate(
+    pai = as.numeric(scale(pai)),
+    elevation = as.numeric(scale(elevation)),
+    decimalLatitude = as.numeric(scale(decimalLatitude, scale = F)),
+    decimalLongitude = as.numeric(scale(decimalLatitude, scale = F)),
+    age_median = as.numeric(scale(age_median)),
+    cover_type = as.factor(cover_type)
+  ) |>
   distinct()
-rm(inv_nat)
+rm(inv_nat, fence)
 
-# should we drop records not identified to species?
-table(df0$logicalCover[grepl('_sp|_spp', df0$binomialName)])
-length(unique(df0$binomialName[grepl('_sp|_spp', df0$binomialName)]))
-# 282 occurences for 29 species, this is a substantial part of the dataset, should be reported if this sticks
-df0 <- df0 |>
-  filter(!grepl('_sp|_spp', binomialName))
-
-# or - reduce species occurence sto just genera?
-
-# create species matrix for fractional cover, plot-date as row with species as col
-mat_0 <- df0 |>
+# create species matrix for presence-absence, plot-date as row with species as col
+mat_p <- df0 |>
+  mutate(fractionCover = percentCover / 100) |>
   select(c(plotDate, binomialName, fractionCover)) |>
   group_by(plotDate, binomialName) |>
   tidyr::pivot_wider(names_from = binomialName, values_from = fractionCover) |>
   arrange(plotDate) |>
   tibble::column_to_rownames('plotDate') |>
-  as.matrix()
-# create species matrix for presence-absence, plot-date as row with species as col
-mat_p <- mat_0 |>
+  as.matrix() |>
   apply(c(1, 2), \(xx) ifelse(xx > 0.0001, 1, 0))
-mat_f <- mat_0 |>
-  apply(c(1, 2), \(xx) ifelse(xx < 0.001, NA, xx)) |>
-  apply(c(1, 2), \(xx) ifelse(is.na(xx), NA, NEON1::logit_Warton(xx)))
 # create environmental matrix
 env1 <- df0 |>
-  select(c(plotDate, age_median, pai, time_since_fence, elev, cover_type, log, cow, pig)) |>
+  select(c(plotDate, age_median, pai, time_since_fence, elevation, cover_type, log, cow, pig)) |>
   arrange(plotDate) |>
   distinct() |>
+  tibble::column_to_rownames('plotDate') |>
   as.data.frame()
-# create study-design matrix
-stu1 <- df0 |>
-  select(c(plotDate, plotID, endDate, date_day_center, lon, lat)) |>
-  distinct() |>
-  arrange(plotDate) |>
-  mutate(dateFactor = as.factor(as.character(endDate))) |>
-  mutate(plotID = as.factor(plotID)) |>
-  mutate(plotDate = as.factor(plotDate)) |>
-  distinct() |>
-  as.data.frame()
-tr1 <- NEON1::spp |>
+# create trait df
+tr1 <- df0 |>
   select(binomialName, nativeStatusCode) |>
   distinct() |>
   filter(binomialName %in% colnames(mat_p)) |>
   arrange(binomialName) |>
-  tibble::column_to_rownames('binomialName') |>
-  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'NI?', 'N', nativeStatusCode)) |>
-  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'UNK', 'N', nativeStatusCode)) |>
-  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode))
-#tax <- ape::as.phylo(~class/subclass/superorder/order/family/genus/binomialName, data = tax)
+  tibble::column_to_rownames('binomialName')
+# create study-design matrix
+stu0 <- df0 |>
+  select(c(plotDate, plotID, date_day_center)) |>
+  distinct() |>
+  arrange(plotDate) |>
+  mutate(plotDate = as.factor(plotDate)) |>
+  select(plotDate) |>
+  mutate(p0 = plotDate) |>
+  tibble::column_to_rownames('p0') |>
+  as.data.frame()
 
 # check matrix/df alignment and modify for modelling
 stopifnot(
-  nrow(mat_f) == nrow(mat_p),
-  nrow(mat_f) == nrow(env1),
-  nrow(mat_f) == nrow(stu1),
-  identical(row.names(mat_f), row.names(mat_p)),
-  identical(row.names(mat_f), env1$plotDate),
-  identical(row.names(mat_f), as.character(stu1$plotDate)),
-  identical(stu1$plotDate, re1$plotDate),
-  all(colnames(mat_p) %in% row.names(tr1)),
-  all(row.names(tr1) %in% colnames(mat_p)),
-  identical(row.names(tr1), colnames(mat_p))
+  identical(row.names(mat_p), row.names(env1)),
+  identical(row.names(mat_p), row.names(stu0)),
+  identical(colnames(mat_p), row.names(tr1))
 )
 
-# last step fixes
-rownames(mat_f) <- NULL
-env1 <- env1[, -which(colnames(env1) == 'plotDate'), drop = F]
-env1 <- within(env1, rm(plotDate))
-stu1 <- tibble::column_to_rownames(stu1, 'plotDate')
-stu1 <- stu1[, c('lon', 'lat', 'date_day_center')]
-# i think skip the reduced-rank part
-#rr1 <- stu1[, 'plotDate', drop = F]
-
-# check distribution of effects and covariates
-hist(env1$pai, breaks = 30)
-# pai looks bimodal
-#hist(as.numeric(env1$ageFactor), breaks = 30)
-hist(env1$age_median, breaks = 30)
-# soil age looks lognormal
-hist(env1$time_since_fence, breaks = 30)
-# not very normal
-hist(env1$elev, breaks = 30)
-# super bimodal
-
-# modelling
-# kable(VP$R2T$Beta), where VP is the result of computeVariancePartitioning
-
-# fixed-effects
-xf1 <- as.formula(~ age_median + pai + time_since_fence + elev + log + cow + pig + cover_type)
-# random effects
-#rL <- Hmsc::HmscRandomLevel(units = stu1$plotID)
-# random effect at sampling unit estimates species-species associations
-#rL <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
-rL1 <- Hmsc::HmscRandomLevel(xData = stu1)
-# constrain latent factors to 2 levels
-#rL$nfMin <- 2
-#rL$nfMax <- 2
+# model terms
+xf1 <- as.formula(~ age_median + pai + time_since_fence + elevation + log + cow + pig + cover_type)
+rL1 <- Hmsc::HmscRandomLevel(units = stu0$plotDate)
 # "Ultimately, the random effect structure one uses in an analysis encodes the assumptions that one makes about
 # how sampling units (subjects and items) vary, and the structure of dependency that this variation creates in one’s data."
 # - Barr et al. 2014
@@ -193,13 +132,11 @@ rL1 <- Hmsc::HmscRandomLevel(xData = stu1)
 # presence/absence probit model
 if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
   m_p <- Hmsc::Hmsc(
-    Y = mat_p, XData = env1, XFormula = xf1, studyDesign = data.frame(plotDate = as.factor(row.names(stu1))), TrData = tr1,
-    #XRRRData = rr1, XRRRFormula = ~ . - 1,
-    #phyloTree = tax,
+    Y = mat_p, XData = env1, studyDesign = stu0, XFormula = xf1, TrData = tr1,
     ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
-    XScale = F, XRRRScale = F
+    XScale = F
   )
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 3000, transient = 1000, nChains = 4, nParallel = 4)
+  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 3000, transient = 1000, nChains = 4, nParallel = 1)
   mc_p <- Hmsc::convertToCodaObject(m_p)
   ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
   # requires normality of explanatory variables i think
