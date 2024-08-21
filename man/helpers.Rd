@@ -9,6 +9,7 @@
 \alias{date_match}
 \alias{sph}
 \alias{order_to_class}
+\alias{ess_as_df}
 \title{Helper functions for NEON1}
 \usage{
 logit_Warton(y, epsilon = NULL)
@@ -24,6 +25,8 @@ date_match(x, y, p)
 sph(vec)
 
 order_to_class()
+
+ess_as_df(ess, param)
 }
 \description{
 Self-explanatory

@@ -232,3 +232,24 @@ order_to_class <- function() {
 
   return(o_t_c)
 }
+#' @rdname helpers
+#' @export
+ess_as_df <- function(ess, param) {
+  require(Hmsc)
+  require(coda)
+
+  edf <- data.frame(term = names(ess), ess = as.numeric(ess))
+  edf$param <- sapply(strsplit(names(ess), ','), \(xx) xx[1])
+  edf$spp <- sapply(strsplit(names(ess), ','), \(xx) xx[2])
+  edf$spp <- sapply(strsplit(edf$spp, ' '), \(xx) xx[2])
+
+  if (param == 'beta') {
+    edf$param <- gsub('B\\[', '', edf$param)
+    edf$param <- sapply(strsplit(edf$param, ' '), \(xx) xx[1])
+
+    ret <- edf
+  }
+
+  return(ret)
+
+}
