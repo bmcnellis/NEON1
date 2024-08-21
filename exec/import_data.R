@@ -142,6 +142,16 @@ dhp <- rbind(dhp, data.frame(plotID = 'PUUM_032', within(dhp[which(dhp$plotID ==
 dhp <- rbind(dhp, data.frame(plotID = 'PUUM_034', within(dhp[which(dhp$plotID == 'PUUM_031'), ], rm(plotID))))
 dhp <- rbind(dhp, data.frame(plotID = 'PUUM_042', within(dhp[which(dhp$plotID == 'PUUM_041'), ], rm(plotID))))
 
+### plot meta-data from NEON regarding historic disturbance/land use history
+lus <- readxl::read_excel('../data/puum plots log_graze.xlsx') |>
+  setNames(c('plotID', 'cover_type', 'log', 'cow', 'pig')) |>
+  mutate(log = ifelse(log %in% c('n', 'm'), FALSE, TRUE)) |>
+  mutate(cow = ifelse(cow == 'n', FALSE, TRUE)) |>
+  mutate(pig = ifelse(pig == 'n', FALSE, TRUE)) |>
+  mutate(cover_type = tolower(cover_type)) |>
+  mutate(cover_type = ifelse(cover_type == 'ohia tropical ash tall', 'ohia ash tall', cover_type)) |>
+  mutate(cover_type = gsub(' ', '_', cover_type))
+
 ### save it all
 usethis::use_data(div_one, overwrite = T)
 usethis::use_data(div_ten, overwrite = T)
@@ -151,3 +161,4 @@ usethis::use_data(dhp, overwrite = T)
 usethis::use_data(str, overwrite = T)
 usethis::use_data(soil_init, overwrite = T)
 usethis::use_data(soil_peri, overwrite = T)
+usethis::use_data(lus, overwrite = T)
