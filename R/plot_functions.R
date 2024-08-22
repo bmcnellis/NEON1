@@ -115,17 +115,27 @@ NMDS_screeplot <- function(mat, kmax = 10) {
 }
 #' @rdname plot_functions
 #' @export
-plotBeta_modified <- function(hM, post, param = "Support") {
+c25 <- function(option = 1) {
+  c0 <- c(
+    "dodgerblue2", "#E31A1C",   "green4",   "#6A3D9A",     "#FF7F00",
+    "black",       "gold1",     "skyblue2", "#FB9A99",     "palegreen2",
+    "#CAB2D6",     "#FDBF6F",   "gray70",   "khaki2",      "maroon",
+    "orchid1",     "deeppink1", "blue1",    "steelblue4",  "darkturquoise",
+    "green1",      "yellow4",   "yellow3",  "darkorange4", "brown"
+  )
+
+  if (option == 1) {
+    return(c0)
+  } else if (option == 2) {
+    # blues/greens
+    return(c0[c(1, 3, 8, 10, 18, 19, 20, 21, 22)])
+  } else {
+    stop('bad option')
+  }
+}
+plot_beta <- function(hM, post) {
 
   require(ggplot2)
-
-  #betaP <- post$support
-  #toPlot <- switch(param, Sign = sign(post$mean), Mean = post$mean, Support = 2 * betaP - 1, stop('bad param'))
-  #toPlot <- toPlot * ((betaP > 0.95) + (betaP < (1 - 0.95)) > 0)
-  #betaMat <- matrix(toPlot, nrow = hM$nc, ncol = ncol(hM$Y))
-  #rownames(betaMat) <- hM$covNames
-  #colnames(betaMat) <- hM$spNames
-  #X <- t(betaMat[1:hM$nc, rev(1:ncol(hM$Y))])
 
   pp <- ifelse(abs(post$support) < 0.9, NA, post$mean)
   pp <- pp[, colSums(is.na(pp)) < 7]
@@ -153,5 +163,38 @@ plotBeta_modified <- function(hM, post, param = "Support") {
       axis.text.y = element_text(color = 'black')
     ) +
     labs(y = 'Relative effect on plant presence', x = '')
+
+}
+#' @rdname plot_functions
+#' @export
+plot_vp <- function(hM, VP) {
+  require(Hmsc)
+  require(ggplot2)
+
+  labs0 <- c(
+    '(sample)', 'Flow age', 'Forest type', 'Grazing disturbance', 'Elevation',
+    'Harvest disturbance', 'PAI', 'Ungulate disturbance', 'Years ungulate-free'
+  )
+  vals0 <- NEON1::c25(2)
+
+  vpd <- VP$vals
+  vpd <- data.frame(var = row.names(vpd), vpd)
+  vpd <- tidyr::pivot_longer(vpd, cols = -1, names_to = 'spp', values_to = 'vp')
+  vpd$vp <- round(vpd$vp * 100, 4)
+  vpd$var <- ifelse(vpd$var == 'Random: plotDate', 'AAA_plotDate', vpd$var)
+
+  plot0 <- ggplot(data = vpd, aes(x = spp, y = vp, fill = var)) +
+    geom_bar(position = 'stack', stat = 'identity') +
+
+    scale_fill_manual(values = vals0, labels = labs0, name = 'Variable') +
+
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(color = 'black', angle = 45, hjust = 1),
+      axis.text.y = element_text(color = 'black')
+    ) +
+    labs(x = '', y = 'Proportion of explained variance')
+
+  return(plot0)
 
 }

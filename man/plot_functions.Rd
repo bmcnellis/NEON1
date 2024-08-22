@@ -6,7 +6,8 @@
 \alias{lm_eqn}
 \alias{Multiplot}
 \alias{NMDS_screeplot}
-\alias{plotBeta_modified}
+\alias{c25}
+\alias{plot_vp}
 \title{Plot functions for NEON1 analysis}
 \usage{
 HighResTiff(plot_obj, file, width_in, height_in, resolution_dpi, ...)
@@ -17,7 +18,9 @@ Multiplot(..., plotlist = NULL, file, cols = 1, layout = NULL)
 
 NMDS_screeplot(mat, kmax = 10)
 
-plotBeta_modified(hM, post, param = "Support")
+c25(option = 1)
+
+plot_vp(hM, VP)
 }
 \description{
 NA

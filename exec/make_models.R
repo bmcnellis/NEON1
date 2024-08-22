@@ -20,6 +20,7 @@ set.seed(1)
 library(NEON1)
 library(dplyr)
 library(Hmsc)
+library(brms)
 
 ### Directories
 data_dir <- '/media/bem/data/NEON'
@@ -57,7 +58,7 @@ df0 <- NEON1::div_one |>
   left_join(NEON1::met[, c('plotID', 'elevation', 'decimalLatitude', 'decimalLongitude')], by = 'plotID') |>
   left_join(NEON1::flow_meta[, c('plotID','age_median')], by = 'plotID') |>
   left_join(NEON1::dhp[, c('plotID', 'pai')], by = 'plotID') |>
-  left_join(NEON1::lus, by = 'plotID') |>
+  left_join(NEON1::lus[, c('plotID', 'cover_type', 'log', 'cow')], by = 'plotID') |>
   # add data from mutates
   mutate(plotDate = paste(plotID, as.character(endDate), sep = '_')) |>
   mutate(plotDate = gsub('PUUM_', '', plotDate)) |>
@@ -74,6 +75,7 @@ df0 <- NEON1::div_one |>
     decimalLatitude = as.numeric(scale(decimalLatitude, scale = F)),
     decimalLongitude = as.numeric(scale(decimalLatitude, scale = F)),
     age_median = as.numeric(scale(age_median)),
+    cover_type = ifelse(cover_type == 'ohia_tall', 'AAA_ohia_tall', cover_type),
     cover_type = as.factor(cover_type)
   ) |>
   distinct()
@@ -91,7 +93,7 @@ mat_p <- df0 |>
   apply(c(1, 2), \(xx) ifelse(xx > 0.0001, 1, 0))
 # create environmental matrix
 env1 <- df0 |>
-  select(c(plotDate, age_median, pai, time_since_fence, elevation, cover_type, log, cow, pig)) |>
+  select(c(plotDate, age_median, pai, time_since_fence, elevation, cover_type, log, cow)) |>
   arrange(plotDate) |>
   distinct() |>
   tibble::column_to_rownames('plotDate') |>
@@ -122,7 +124,7 @@ stopifnot(
 )
 
 # model terms
-xf1 <- as.formula(~ age_median + pai + time_since_fence + elevation + log + cow + pig + cover_type)
+xf1 <- as.formula(~ age_median + pai + time_since_fence + elevation + log + cow + cover_type)
 rL1 <- Hmsc::HmscRandomLevel(units = stu0$plotDate)
 # "Ultimately, the random effect structure one uses in an analysis encodes the assumptions that one makes about
 # how sampling units (subjects and items) vary, and the structure of dependency that this variation creates in one’s data."
@@ -136,17 +138,17 @@ if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
     ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
     XScale = F
   )
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 3000, transient = 1000, nChains = 4, nParallel = 1)
+  #m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 12000, transient = 2000, nChains = 6, nParallel = 6)
+  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 3000, transient = 1000, nChains = 4, nParallel = 4)
   mc_p <- Hmsc::convertToCodaObject(m_p)
   ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
   # requires normality of explanatory variables i think
   mp_p <- Hmsc::computePredictedValues(m_p)
-  save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p'), file = file.path(mod_dir, 'm_p_mod.rda'))
+  mp_pp <- predict(m_p)
+  save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p', 'mp_pp'), file = file.path(mod_dir, 'm_p_mod.rda'))
 } else {
   load(file.path(mod_dir, 'm_p_mod.rda'))
 }
-
-# logit proportion cover/NA normal model
 
 # evaluate
 # Beta = species niches, Gamma = traits on niches, Omega = residual species associations, rho = phylogenetic signal
@@ -178,7 +180,7 @@ if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
 
 
   save(list = c(
-    'mf_p', 'm_ca', #'m_vp', 'ml_pr'
+    'mf_p', 'm_ca', 'm_vp',# 'ml_pr'
     'es_p_beta', 'es_p_omeg', 'es_p_gamm',
     'gd_p_beta', 'gd_p_omeg', 'gd_p_gamm',
     'mpe_p_beta', 'mpe_p_omeg', 'mpe_p_gamm',
@@ -228,6 +230,23 @@ ggplot(data = es_p_beta_param, aes(x = param, y = ess_mean, ymin = ess_mean - es
   labs(x = '', y = 'ESS (Beta)')
 # terms all have similiar ESS, around 2000
 
+{ # summarize the posterior predictive distribution into posterior mean and then extract and standardize the residuals.
+  pm <- apply(mp_p, FUN = mean, MARGIN = 1)
+  # y is response variable
+  nres <- scale(y - pm)
+  par(mfrow = c(1,2))
+  hist(nres, las = 1)
+  plot(pm, nres, las = 1)
+  abline(a = 0, b = 0)
+}
+
+# figure: variance partitioning
+NEON1::plot_vp(m_p, m_vp)
+# how much do traits explain environment-species relationships?
+knitr::kable(round(m_vp$R2T$Beta * 100, 2))
+round(m_vp$R2T$Y * 100, 2)
+# not much, 0.33%
+
 # cross-validation
 #ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
 # commenting out for now, should probably compare it somehow
@@ -236,15 +255,19 @@ ggplot(data = es_p_beta_param, aes(x = param, y = ess_mean, ymin = ess_mean - es
 
 # make a pp_check function
 # or write a pp_check.Hmsc method for bayesplot??
+n_draws <- 1000 # the 12000 is way too many
+m0 <- matrix(sapply(mp_pp, as.numeric), ncol = length(as.numeric(m_p$Y)), nrow = length(mp_pp))
+m0 <- m0[sample.int(nrow(m0), n_draws), ]
+bayesplot::pp_check(as.numeric(m_p$Y), m0, bayesplot::ppc_dens_overlay)
+
+hpd_beta <- coda::HPDinterval(mc_p$Beta, prob = 0.9)
 
 # figures
 
-plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.95)
-plotBeta(m_p, post = ml_pb, param = 'Mean', supportLevel = 0.95)
-plotGamma(m_p, post = ml_pg, param = 'Support', supportLevel = 0.95)
-
-# old
-# kable(VP$R2T$Beta), where VP is the result of computeVariancePartitioning
+plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.90)
+plotBeta(m_p, post = ml_pb, param = 'Mean', supportLevel = 0.90)
+plotGamma(m_p, post = ml_pg, param = 'Support', supportLevel = 0.90)
+knitr::kable(m_vp$R2T$Beta)
 
 # i think this is now ma_p
 sl <- 0.5
@@ -254,6 +277,3 @@ corrplot::corrplot(
   title = paste('random effect level:', m_p$rLNames[1]), mar = c(0, 0, 1, 0)
 )
 
-png(file.path(res_dir, 'model_results_July.png'), width = 8, height = 4.5, units = 'in', res = 150)
-NEON1::plotBeta_modified(m_p, ml_pb, 'Support')
-dev.off()
