@@ -20,13 +20,15 @@ set.seed(1)
 library(NEON1)
 library(dplyr)
 library(Hmsc)
-library(brms)
+
+#dir0 <- '/media/bem/data/NEON'
+dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories
-data_dir <- '/media/bem/data/NEON'
-resid_dir <- '/media/bem/data/results/reports'
-res_dir <- '/media/bem/data/NEON/results'
-mod_dir <- '/media/bem/data/NEON/results/model_results'
+data_dir <- dir0
+res_dir <- file.path(dir0, 'results')
+mod_dir <- file.path(dir0, 'results/model_results')
+stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
 ### Data import
 
@@ -139,19 +141,14 @@ if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
     XScale = F
   )
   #m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 12000, transient = 2000, nChains = 6, nParallel = 6)
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 3000, transient = 1000, nChains = 4, nParallel = 4)
+  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 4000, transient = 1000, nChains = 4, nParallel = 2)
   mc_p <- Hmsc::convertToCodaObject(m_p)
   ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
   # requires normality of explanatory variables i think
   mp_p <- Hmsc::computePredictedValues(m_p)
   mp_pp <- predict(m_p)
   save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p', 'mp_pp'), file = file.path(mod_dir, 'm_p_mod.rda'))
-} else {
-  load(file.path(mod_dir, 'm_p_mod.rda'))
 }
-
-# evaluate
-# Beta = species niches, Gamma = traits on niches, Omega = residual species associations, rho = phylogenetic signal
 
 # presence/absence probit model
 if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
@@ -187,93 +184,4 @@ if (!file.exists(file.path(mod_dir, 'm_p_diag.rda'))) {
     'ml_pb', 'ml_po', 'ml_pg'
   ), file = file.path(mod_dir, 'm_p_diag.rda'))
 
-} else {
-  load(file.path(mod_dir, 'm_p_diag.rda'))
 }
-
-hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)))
-# RMSE for probit, R2 for others
-hist(es_p_beta, breaks = 30, main = 'ess:Beta, model p')
-hist(es_p_gamm, breaks = 30, main = 'ess:Gamma, model p')
-hist(es_p_omeg, breaks = 30, main = 'ess:Omega, model p')
-hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
-table(abs(gd_p_beta[, 1] - 1) > 0.02)
-hist(gd_p_gamm, breaks = 30, main = 'psrf:Gamma, model p')
-hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
-hist(gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.05), 1], breaks = 30)
-table(abs(gd_p_omeg[, 1] - 1) > 0.05)
-
-# which species have low ess?
-es_p_beta <- NEON1::ess_as_df(es_p_beta, 'beta')
-es_p_beta_spp <- summarise(group_by(es_p_beta, spp), ess_mean = mean(ess), ess_sd = sd(ess)/n())
-es_p_beta_param <- summarise(group_by(es_p_beta, param), ess_mean = mean(ess), ess_param = sd(ess)/n())
-
-ggplot(data = es_p_beta_spp, aes(x = spp, y = ess_mean, ymin = ess_mean - ess_sd, ymax = ess_mean + ess_sd)) +
-  geom_bar(stat = 'identity', fill = 'grey70') +
-  geom_errorbar(width = 0.3, size = 0.5) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(color = 'black', angle = 45, hjust = 1),
-      axis.text.y = element_text(color = 'black')
-    ) +
-    labs(x = '', y = 'ESS (Beta)')
-
-# which terms have low ESS?
-ggplot(data = es_p_beta_param, aes(x = param, y = ess_mean, ymin = ess_mean - ess_param, ymax = ess_mean + ess_param)) +
-  geom_bar(stat = 'identity', fill = 'grey70') +
-  geom_errorbar(width = 0.3, size = 0.5) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(color = 'black', angle = 45, hjust = 1),
-    axis.text.y = element_text(color = 'black')
-  ) +
-  labs(x = '', y = 'ESS (Beta)')
-# terms all have similiar ESS, around 2000
-
-{ # summarize the posterior predictive distribution into posterior mean and then extract and standardize the residuals.
-  pm <- apply(mp_p, FUN = mean, MARGIN = 1)
-  # y is response variable
-  nres <- scale(y - pm)
-  par(mfrow = c(1,2))
-  hist(nres, las = 1)
-  plot(pm, nres, las = 1)
-  abline(a = 0, b = 0)
-}
-
-# figure: variance partitioning
-NEON1::plot_vp(m_p, m_vp)
-# how much do traits explain environment-species relationships?
-knitr::kable(round(m_vp$R2T$Beta * 100, 2))
-round(m_vp$R2T$Y * 100, 2)
-# not much, 0.33%
-
-# cross-validation
-#ml_pa <- Hmsc::createPartition(ml, nfolds = 2, column = 'plotDate')
-# commenting out for now, should probably compare it somehow
-#ml_xv <- Hmsc::computePredictedValues(ml, partition = ml_pa, nParallel = 2)
-#Hmsc::evaluateModelFit(hM = ml, predY = ml_xv)
-
-# make a pp_check function
-# or write a pp_check.Hmsc method for bayesplot??
-n_draws <- 1000 # the 12000 is way too many
-m0 <- matrix(sapply(mp_pp, as.numeric), ncol = length(as.numeric(m_p$Y)), nrow = length(mp_pp))
-m0 <- m0[sample.int(nrow(m0), n_draws), ]
-bayesplot::pp_check(as.numeric(m_p$Y), m0, bayesplot::ppc_dens_overlay)
-
-hpd_beta <- coda::HPDinterval(mc_p$Beta, prob = 0.9)
-
-# figures
-
-plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.90)
-plotBeta(m_p, post = ml_pb, param = 'Mean', supportLevel = 0.90)
-plotGamma(m_p, post = ml_pg, param = 'Support', supportLevel = 0.90)
-knitr::kable(m_vp$R2T$Beta)
-
-# i think this is now ma_p
-sl <- 0.5
-cp <- ((m_ca[[1]]$support > sl) + (m_ca[[1]]$support < (1 - sl)) > 0) * m_ca[[1]]$mean
-corrplot::corrplot(
-  cp, method = 'color', col = colorRampPalette(c('blue', 'white', 'red'))(200),
-  title = paste('random effect level:', m_p$rLNames[1]), mar = c(0, 0, 1, 0)
-)
-

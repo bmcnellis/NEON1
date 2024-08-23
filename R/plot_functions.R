@@ -173,9 +173,9 @@ plot_vp <- function(hM, VP) {
 
   labs0 <- c(
     '(sample)', 'Flow age', 'Forest type', 'Grazing disturbance', 'Elevation',
-    'Harvest disturbance', 'PAI', 'Ungulate disturbance', 'Years ungulate-free'
+    'Harvest disturbance', 'PAI', 'Years ungulate-free'
   )
-  vals0 <- NEON1::c25(2)
+  vals0 <- NEON1::c25(2)[-9]
 
   vpd <- VP$vals
   vpd <- data.frame(var = row.names(vpd), vpd)
@@ -197,4 +197,47 @@ plot_vp <- function(hM, VP) {
 
   return(plot0)
 
+}
+#' @rdname plot_functions
+#' @export
+ess_plot <- function(es_df, var, ylab) {
+  require(ggplot2)
+
+  stopifnot(all(c('ess_mean', 'ess_sd') %in% colnames(es_df)))
+
+  var0 <- enquo(var)
+
+  es0 <- ggplot(data = es_df, aes(x = !!var0, y = ess_mean, ymin = ess_mean - ess_sd, ymax = ess_mean + ess_sd)) +
+    geom_bar(stat = 'identity', fill = 'grey70') +
+    geom_errorbar(width = 0.3, size = 0.5) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(color = 'black', angle = 45, hjust = 1),
+      axis.text.y = element_text(color = 'black')
+    ) +
+    labs(x = '', y = ylab)
+
+  return(es0)
+}
+#' @rdname plot_functions
+#' @export
+param_plot <- function(post, ylab) {
+  require(ggplot2)
+
+  plot0 <- ggplot(data = post, aes(x = spp, y = mean, ymin = lower, ymax = upper)) +
+
+    geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey50') +
+    geom_point() +
+    geom_errorbar() +
+
+    facet_wrap(~ var, scales = 'free_x') +
+
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(color = 'black', angle = 45, hjust = 1, size = 8),
+      axis.text.y = element_text(color = 'black')
+    ) +
+    labs(x = '', y = ylab)
+
+  return(plot0)
 }

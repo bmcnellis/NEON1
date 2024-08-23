@@ -253,3 +253,39 @@ ess_as_df <- function(ess, param) {
   return(ret)
 
 }
+#' @rdname helpers
+#' @export
+posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
+  require(coda)
+
+  mb <- summary(mcmc[[term]], quantiles = NULL)[[1]]
+  mb <- data.frame(term = row.names(mb), mean = mb[, 1], row.names = NULL)
+
+  hp <- coda::HPDinterval(mcmc[[term]], prob = prob)
+
+  for (i in seq_along(hp)) colnames(hp[[i]]) <- paste(colnames(hp[[i]]), i, sep = '_')
+  hp <- do.call('cbind', hp)
+  hp <- data.frame(term = row.names(hp), hp, row.names = NULL)
+
+  hpd <- dplyr::left_join(mb, hp, by = 'term')
+
+  if (average) {
+    lower <- rowMeans(hpd[, grepl('lower', colnames(hpd))], na.rm = T)
+    upper <- rowMeans(hpd[, grepl('upper', colnames(hpd))], na.rm = T)
+    hpd <- data.frame(term = hpd$term, mean = hpd$mean, lower, upper)
+
+    if (drop_ns) {
+      hpd <- hpd[!(hpd$lower <= 0 & hpd$upper >= 0), ]
+    }
+  }
+
+  spp <- sapply(strsplit(hpd$term, ' '), \(xx) xx[3])
+  var <- sapply(strsplit(hpd$term, ' '), \(xx) xx[1])
+  var <- sapply(strsplit(var, '\\['), \(xx) xx[2])
+
+  hpd$spp <- spp
+  hpd$var <- var
+
+  return(hpd)
+
+}

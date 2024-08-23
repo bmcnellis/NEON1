@@ -8,6 +8,8 @@
 \alias{NMDS_screeplot}
 \alias{c25}
 \alias{plot_vp}
+\alias{ess_plot}
+\alias{param_plot}
 \title{Plot functions for NEON1 analysis}
 \usage{
 HighResTiff(plot_obj, file, width_in, height_in, resolution_dpi, ...)
@@ -21,6 +23,10 @@ NMDS_screeplot(mat, kmax = 10)
 c25(option = 1)
 
 plot_vp(hM, VP)
+
+ess_plot(es_df, var, ylab)
+
+param_plot(post, ylab)
 }
 \description{
 NA
