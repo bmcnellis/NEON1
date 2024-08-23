@@ -21,8 +21,8 @@ library(NEON1)
 library(dplyr)
 library(Hmsc)
 
-#dir0 <- '/media/bem/data/NEON'
-dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
+dir0 <- '/media/bem/data/NEON'
+#dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories
 data_dir <- dir0
@@ -43,7 +43,9 @@ fence <- NEON1::fence |>
   mutate(time_since_fence = ifelse(is.na(time_since_fence), 0, time_since_fence)) |>
   select(c(plotID, time_since_fence)) |>
   distinct()
+# combine div_one and div_ten?
 df0 <- NEON1::div_one |>
+  # 125 species to start
   # convert scientificName to binomialName
   left_join(NEON1::spp, by = 'scientificName') |>
   # pivot the dataframe to fill in 0's, then aggregate across subplots
@@ -66,9 +68,22 @@ df0 <- NEON1::div_one |>
   mutate(plotDate = gsub('PUUM_', '', plotDate)) |>
   mutate(date_day_center = as.integer(round(scale(as.numeric(endDate) / 86400, scale = F)))) |>
   # drop species which are not identified to species
-  filter(!grepl('_sp|_spp', binomialName)) |>
+  # 122 species
+  filter(!grepl('_sp|_spp', binomialName))
+  # 93 species
+# drop species which have less than 8 occurences in the entire dataset
+# this represents > 5% of the total possible occurences (142)
+drop_spp <- df0 |>
+  group_by(binomialName) |>
+  summarise(oc = sum(ifelse(percentCover > 0.001, 1, 0))) |>
+  filter(oc >= 8) |>
+  pull(binomialName)
+df0 <- df0 |>
+  # 93 species
+  filter(binomialName %in% drop_spp) |>
+  # 45 species
   # assume all NI? are N
-  mutate(nativeStatusCode = ifelse(nativeStatusCode == 'NI?', 'N', 'I')) |>
+  mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
   # center/scale and fix for Hmsc inputs
   mutate(
@@ -81,7 +96,7 @@ df0 <- NEON1::div_one |>
     cover_type = as.factor(cover_type)
   ) |>
   distinct()
-rm(inv_nat, fence)
+rm(inv_nat, fence, drop_spp)
 
 # create species matrix for presence-absence, plot-date as row with species as col
 mat_p <- df0 |>
@@ -140,11 +155,11 @@ if (!file.exists(file.path(mod_dir, 'm_p_mod.rda'))) {
     ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
     XScale = F
   )
-  #m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 12000, transient = 2000, nChains = 6, nParallel = 6)
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 4000, transient = 1000, nChains = 4, nParallel = 2)
+  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 13000, transient = 3000, nChains = 6, nParallel = 6)
+  #m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = 4000, transient = 1000, nChains = 4, nParallel = 2)
   mc_p <- Hmsc::convertToCodaObject(m_p)
   ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
-  # requires normality of explanatory variables i think
+  # requires normality of explanatory variables i think?
   mp_p <- Hmsc::computePredictedValues(m_p)
   mp_pp <- predict(m_p)
   save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p', 'mp_pp'), file = file.path(mod_dir, 'm_p_mod.rda'))
