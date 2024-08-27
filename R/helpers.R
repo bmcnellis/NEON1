@@ -289,3 +289,18 @@ posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
   return(hpd)
 
 }
+#' @rdname helpers
+#' @export
+NEON_div_full_400 <- function() {
+  # gets all subplots necessary to pool presence/absence by the full 400-m quad
+
+  # 31.1.10 + 31.1.1 + 34.4.10 + 34.4.1 + 32.2.10 + 32.2.1 + 32.4.10 + 32.4.1 +
+  # 40.1.10 + 40.1.1 + 40.3.10 + 40.3.1 + 41.1.10 + 41.1.1 + 41.4.10 + 41.4.1
+  f0 <- c(
+    '31.1.10', '31.1.1','34.4.10', '34.4.1', '32.2.10', '32.2.1', '32.4.10', '32.4.1',
+    '40.1.10', '40.1.1', '40.3.10', '40.3.1', '41.1.10', '41.1.1', '41.4.10', '41.4.1'
+  )
+
+  return(f0)
+
+}

@@ -241,3 +241,33 @@ param_plot <- function(post, ylab) {
 
   return(plot0)
 }
+#' @rdname plot_functions
+#' @export
+plot_resid <- function(m_p, mp_p) {
+  require(Hmsc)
+  on.exit(par(mfrow = c(1, 1)))
+
+  posterior_mean <- apply(mp_p, c(1, 2), FUN = mean)
+  residuals <- m_p$Y - posterior_mean
+  par(mfrow = c(1,2))
+  hist(residuals, las = 1)
+  plot(posterior_mean, residuals, las = 1)
+  abline(a = 0, b = 0)
+
+}
+#' @rdname plot_functions
+#' @export
+pp_check <- function(m_p, mp_pp, n_draws = NULL) {
+
+  m0 <- matrix(sapply(mp_pp, as.numeric), ncol = length(as.numeric(m_p$Y)), nrow = length(mp_pp))
+
+  if (is.null(n_draws)) {
+    n_draws <- nrow(m0) * 0.1
+  }
+
+  m0 <- m0[sample.int(nrow(m0), n_draws), ]
+
+  p0 <- bayesplot::pp_check(as.numeric(m_p$Y), m0, bayesplot::ppc_dens_overlay)
+
+  return(p0)
+}

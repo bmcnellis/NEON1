@@ -23,14 +23,20 @@ library(dplyr)
 library(Hmsc)
 library(coda)
 library(bayesplot)
+library(MCMCvis)
 
-dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
+# model parameters
+s0 <- c(13000, 3000, 6, 6) # iterations, burn, chains, parallel
+s1 <- (s0[1] - s0[2]) * s0[3] # for ES
+
+#dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
+dir0 <- '/media/bem/data/NEON'
 
 ### Directories
 data_dir <- dir0
 res_dir <- file.path(dir0, 'results')
 mod_dir <- file.path(dir0, 'results/model_results')
-fig_dir <- file.path(dir0, '/results/figures')
+fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(
   dir.exists(data_dir),
   dir.exists(res_dir),
@@ -49,22 +55,9 @@ load(file.path(mod_dir, 'm_p_diag.rda'))
 ## Cross-validation
 
 ## Posterior predictive checks
-if (F) { # summarize the posterior predictive distribution into posterior mean and then extract and standardize the residuals.
-  pm <- apply(mp_p, FUN = mean, MARGIN = 1)
-  # y is response variable
-  nres <- scale(y - pm)
-  par(mfrow = c(1,2))
-  hist(nres, las = 1)
-  plot(pm, nres, las = 1)
-  abline(a = 0, b = 0)
-}
+
 ## pp_check using bayesplot::
-if (F) {
-  n_draws <- 1000 # the 12000 is way too many
-  m0 <- matrix(sapply(mp_pp, as.numeric), ncol = length(as.numeric(m_p$Y)), nrow = length(mp_pp))
-  m0 <- m0[sample.int(nrow(m0), n_draws), ]
-  bayesplot::pp_check(as.numeric(m_p$Y), m0, bayesplot::ppc_dens_overlay)
-}
+NEON1::pp_check(m_p = m_p, mp_pp = mp_pp, 2000)
 
 ## Effective sample size
 hist(es_p_beta, breaks = 30, main = 'ess:Beta, model p')
@@ -77,6 +70,8 @@ es_p_beta_param <- summarise(group_by(es_p_beta, param), ess_mean = mean(ess), e
 NEON1::ess_plot(es_p_beta_spp, spp, 'ESS (Beta)')
 NEON1::ess_plot(es_p_beta_param, param, 'ESS (Beta)')
 
+MCMCvis::MCMCsummary(mc_p$Beta)
+
 ## RMSE/R2
 hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)), breaks = 30)
 # RMSE for probit, R2 for others
@@ -85,11 +80,13 @@ hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2
 # Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
 # Journal of Computational and Graphical Statistics, 7, 434-455.
 hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
-table(abs(gd_p_beta[, 1] - 1) > 0.02)
+table(abs(gd_p_beta[, 1] - 1) > 0.01)
+gd_p_beta[which(abs(gd_p_beta[, 1] - 1) > 0.01), ]
 hist(gd_p_gamm, breaks = 30, main = 'psrf:Gamma, model p')
 hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
-hist(gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.05), 1], breaks = 30)
-table(abs(gd_p_omeg[, 1] - 1) > 0.05)
+hist(gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.01), 1], breaks = 30)
+table(abs(gd_p_omeg[, 1] - 1) > 0.01)
+gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.01), ]
 
 ### Generating data/eval for figures
 

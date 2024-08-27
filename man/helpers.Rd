@@ -11,6 +11,7 @@
 \alias{order_to_class}
 \alias{ess_as_df}
 \alias{posterior_from_coda}
+\alias{NEON_div_full_400}
 \title{Helper functions for NEON1}
 \usage{
 logit_Warton(y, epsilon = NULL)
@@ -30,6 +31,8 @@ order_to_class()
 ess_as_df(ess, param)
 
 posterior_from_coda(mcmc, term, prob, average = F, drop_ns = F)
+
+NEON_div_full_400()
 }
 \description{
 Self-explanatory

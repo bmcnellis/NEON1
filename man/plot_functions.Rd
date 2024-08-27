@@ -10,6 +10,8 @@
 \alias{plot_vp}
 \alias{ess_plot}
 \alias{param_plot}
+\alias{plot_resid}
+\alias{pp_check}
 \title{Plot functions for NEON1 analysis}
 \usage{
 HighResTiff(plot_obj, file, width_in, height_in, resolution_dpi, ...)
@@ -27,6 +29,10 @@ plot_vp(hM, VP)
 ess_plot(es_df, var, ylab)
 
 param_plot(post, ylab)
+
+plot_resid(m_p, mp_p)
+
+pp_check(m_p, mp_pp, n_draws = NULL)
 }
 \description{
 NA
