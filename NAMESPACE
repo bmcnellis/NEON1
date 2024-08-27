@@ -2,7 +2,6 @@
 
 export(HighResTiff)
 export(Multiplot)
-export(NEON_div_full_400)
 export(NMDS_screeplot)
 export(c25)
 export(check_residuals)

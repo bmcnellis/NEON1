@@ -20,6 +20,8 @@ set.seed(1)
 library(NEON1)
 library(dplyr)
 library(Hmsc)
+library(coda)
+library(MCMCvis)
 
 # model parameters
 s0 <- c(13000, 3000, 6, 6)# iterations, burn, chains, parallel
@@ -231,92 +233,103 @@ stopifnot(
 # model terms
 xf1 <- as.formula(~ age_median + pai + time_since_fence + elevation + log + cow + cover_type)
 rL0 <- Hmsc::HmscRandomLevel(units = stu0$plotDate)
-rL0 <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
+rL1 <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
 # "Ultimately, the random effect structure one uses in an analysis encodes the assumptions that one makes about
 # how sampling units (subjects and items) vary, and the structure of dependency that this variation creates in one’s data."
 # - Barr et al. 2014
 
 # fit
 # presence/absence probit model
-if (!file.exists(file.path(mod_dir, 'm_p_mod0.rda'))) {
-  m_p <- Hmsc::Hmsc(
-    Y = mat_p, XData = env0, studyDesign = stu0, XFormula = xf1, TrData = tr0,
-    ranLevels = list('plotDate' = rL0), distr = 'probit', TrFormula = ~nativeStatusCode,
-    XScale = F
-  )
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
-  mc_p <- Hmsc::convertToCodaObject(m_p)
-  ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
-  # requires normality of explanatory variables i think?
-  mp_p <- Hmsc::computePredictedValues(m_p)
-  mp_pp <- predict(m_p)
-  save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p', 'mp_pp'), file = file.path(mod_dir, 'm_p_mod0.rda'))
-}
-if (!file.exists(file.path(mod_dir, 'm_p_mod1.rda'))) {
-  m_p <- Hmsc::Hmsc(
-    Y = mat_t, XData = env1, studyDesign = stu1, XFormula = xf1, TrData = tr1,
-    ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
-    XScale = F
-  )
-  m_p <- Hmsc::sampleMcmc(m_p, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
-  mc_p <- Hmsc::convertToCodaObject(m_p)
-  ma_p <- Hmsc::computeAssociations(m_p, thin = 10)
-  # requires normality of explanatory variables i think?
-  mp_p <- Hmsc::computePredictedValues(m_p)
-  mp_pp <- predict(m_p)
-  save(list = c('m_p', 'mc_p', 'ma_p', 'mp_p', 'mp_pp'), file = file.path(mod_dir, 'm_p_mod1.rda'))
-}
+# using only 1-m data
+m_p_0 <- Hmsc::Hmsc(
+  Y = mat_p, XData = env0, studyDesign = stu0, XFormula = xf1, TrData = tr0,
+  ranLevels = list('plotDate' = rL0), distr = 'probit', TrFormula = ~nativeStatusCode,
+  XScale = F
+)
+m_p_0 <- Hmsc::sampleMcmc(m_p_0, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
+mc_p_0 <- Hmsc::convertToCodaObject(m_p_0)
+ma_p_0 <- Hmsc::computeAssociations(m_p_0, thin = 10)
+mp_p_0 <- Hmsc::computePredictedValues(m_p_0)
+mp_pp_0 <- predict(m_p_0)
 
+mf_p_0 <- Hmsc::evaluateModelFit(hM = m_p_0, predY = mp_p_0)
+m_vp_0 <- Hmsc::computeVariancePartitioning(m_p_0)
+m_pv_0 <- Hmsc::computePredictedValues(m_p_0)
+m_ca_0 <- Hmsc::computeAssociations(m_p_0)
+
+mc_s_beta_0 <- MCMCvis::MCMCsummary(mc_p_0$Beta)
+mc_s_gamm_0 <- MCMCvis::MCMCsummary(mc_p_0$Gamma)
+mc_s_omeg_0 <- MCMCvis::MCMCsummary(mc_p_0$Omega[[1]])
+
+post_beta_0 <- NEON1::posterior_from_coda(mc_p_0, 'Beta', 0.9, average = T, drop_ns = T)
+post_gamm_0 <- NEON1::posterior_from_coda(mc_p_0, 'Gamma', 0.9, average = T, drop_ns = T)
+post_omeg_0 <- NEON1::posterior_from_coda(mc_p_0, 'Omega', 0.9, average = T, drop_ns = T)
+
+## Gelman's PSRF (Potential Scale Reduction Factor)
+# Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
+# Journal of Computational and Graphical Statistics, 7, 434-455.
+gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = F)$psrf
+gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = F)$psrf
+gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = F)$psrf
+
+save(list = c('m_p_0', 'mc_p_0', 'ma_p_0', 'mp_p_0', 'mp_pp_0'), file = file.path(mod_dir, 'm_p_mod0.rda'))
+save(list = c('mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_omeg_0', 'gd_p_beta_0', 'gd_p_omeg_0', 'gd_p_gamm_0', 'post_beta_0', 'post_gamm_0', 'post_omeg_0'), file = file.path(mod_dir, 'm_p_diag0.rda'))
+
+# fit
 # presence/absence probit model
-if (!file.exists(file.path(mod_dir, 'm_p_diag0.rda'))) {
+# using all 400-m data
+m_p_1 <- Hmsc::Hmsc(
+  Y = mat_t, XData = env1, studyDesign = stu1, XFormula = xf1, TrData = tr1,
+  ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
+  XScale = F
+)
+m_p_1 <- Hmsc::sampleMcmc(m_p_1, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
+mc_p_1 <- Hmsc::convertToCodaObject(m_p_1)
+ma_p_1 <- Hmsc::computeAssociations(m_p_1, thin = 10)
+mp_p_1 <- Hmsc::computePredictedValues(m_p_1)
+mp_pp_1 <- predict(m_p_1)
 
-  mf_p <- Hmsc::evaluateModelFit(hM = m_p, predY = mp_p)
-  m_vp <- Hmsc::computeVariancePartitioning(m_p)
-  m_pv <- Hmsc::computePredictedValues(m_p)
-  m_ca <- Hmsc::computeAssociations(m_p)
+mf_p_1 <- Hmsc::evaluateModelFit(hM = m_p_1, predY = mp_p_1)
+m_vp_1 <- Hmsc::computeVariancePartitioning(m_p_1)
+m_pv_1 <- Hmsc::computePredictedValues(m_p_1)
+m_ca_1 <- Hmsc::computeAssociations(m_p_1)
 
-  #es_p_beta <- coda::effectiveSize(mc_p$Beta)
-  #es_p_gamm <- coda::effectiveSize(mc_p$Gamma)
-  #es_p_omeg <- coda::effectiveSize(mc_p$Omega[[1]])
+mc_s_beta_1 <- MCMCvis::MCMCsummary(mc_p_1$Beta)
+mc_s_gamm_1 <- MCMCvis::MCMCsummary(mc_p_1$Gamma)
+mc_s_omeg_1 <- MCMCvis::MCMCsummary(mc_p_1$Omega[[1]])
 
-  gd_p_beta <- coda::gelman.diag(mc_p$Beta, multivariate = F)$psrf
-  gd_p_gamm <- coda::gelman.diag(mc_p$Gamma, multivariate = F)$psrf
-  gd_p_omeg <- coda::gelman.diag(mc_p$Omega[[1]], multivariate = F)$psrf
+post_beta_1 <- NEON1::posterior_from_coda(mc_p_1, 'Beta', 0.9, average = T, drop_ns = T)
+post_gamm_1 <- NEON1::posterior_from_coda(mc_p_1, 'Gamma', 0.9, average = T, drop_ns = T)
+post_omeg_1 <- NEON1::posterior_from_coda(mc_p_1, 'Omega', 0.9, average = T, drop_ns = T)
 
-  #mpe_p_beta <- Hmsc::getPostEstimate(m_p, parName = 'Beta')
-  #mpe_p_gamm <- Hmsc::getPostEstimate(m_p, parName = 'Gamma')
-  #mpe_p_omeg <- Hmsc::getPostEstimate(m_p, parName = 'Omega')
+## Gelman's PSRF (Potential Scale Reduction Factor)
+# Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
+# Journal of Computational and Graphical Statistics, 7, 434-455.
+gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = F)$psrf
+gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = F)$psrf
+gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = F)$psrf
 
-  #ml_pr <- getPostEstimate(m_p, parName = 'Lambda')
-  #ml_pb <- Hmsc::getPostEstimate(m_p, parName = 'Beta')
-  #ml_po <- Hmsc::getPostEstimate(m_p, parName = 'Omega')
-  #ml_pg <- Hmsc::getPostEstimate(m_p, parName = 'Gamma')
+save(list = c('m_p_1', 'mc_p_1', 'ma_p_1', 'mp_p_1', 'mp_pp_1'), file = file.path(mod_dir, 'm_p_mod1.rda'))
+save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1', 'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1', 'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda'))
 
+# cross-validation
+nf <- c(2, 5, 10)
+xv_0 <- vector('list', length(nf))
+xv_mf_0 <- vector('list', length(nf))
+xv_1 <- vector('list', length(nf))
+xv_mf_1 <- vector('list', length(nf))
 
-  save(list = c(
-    'mf_p', 'm_ca', 'm_vp',# 'ml_pr'
-    #'es_p_beta', 'es_p_omeg', 'es_p_gamm',
-    'gd_p_beta', 'gd_p_omeg', 'gd_p_gamm'
-    #'mpe_p_beta', 'mpe_p_omeg', 'mpe_p_gamm',
-    #'ml_pb', 'ml_po', 'ml_pg'
-  ), file = file.path(mod_dir, 'm_p_diag0.rda'))
-
+for (i in seq_along(nf)) {
+  ip_0 <- Hmsc::createPartition(m_p_0, nfolds = nf[i])
+  ip_1 <- Hmsc::createPartition(m_p_1, nfolds = nf[i])
+  ipv_0 <- Hmsc::computePredictedValues(m_p_0, partition = ip_0, nParallel = s0[4])
+  ipv_1 <- Hmsc::computePredictedValues(m_p_1, partition = ip_1, nParallel = s0[4])
+  ipmf_0 <- Hmsc::evaluateModelFit(hM = m_p_0, predY = ipv_0)
+  ipmf_1 <- Hmsc::evaluateModelFit(hM = m_p_1, predY = ipv_1)
+  xv_0[[i]] <- ipv_0
+  xv_1[[i]] <- ipv_1
+  xv_mf_0[[i]] <- ipmf_0
+  xv_mf_1[[i]] <- ipmf_1
 }
-
-if (!file.exists(file.path(mod_dir, 'm_p_diag1.rda'))) {
-
-  mf_p <- Hmsc::evaluateModelFit(hM = m_p, predY = mp_p)
-  m_vp <- Hmsc::computeVariancePartitioning(m_p)
-  m_pv <- Hmsc::computePredictedValues(m_p)
-  m_ca <- Hmsc::computeAssociations(m_p)
-
-  gd_p_beta <- coda::gelman.diag(mc_p$Beta, multivariate = F)$psrf
-  gd_p_gamm <- coda::gelman.diag(mc_p$Gamma, multivariate = F)$psrf
-  gd_p_omeg <- coda::gelman.diag(mc_p$Omega[[1]], multivariate = F)$psrf
-
-  save(list = c(
-    'mf_p', 'm_ca', 'm_vp',
-    'gd_p_beta', 'gd_p_omeg', 'gd_p_gamm'
-  ), file = file.path(mod_dir, 'm_p_diag1.rda'))
-
-}
+save(list = c('xv_0', 'xv_mf_0'), file = file.path(mod_dir, 'm_p_xv0.rda'))
+save(list = c('xv_1', 'xv_mf_1'), file = file.path(mod_dir, 'm_p_xv1.rda'))

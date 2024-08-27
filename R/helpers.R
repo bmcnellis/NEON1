@@ -258,7 +258,11 @@ ess_as_df <- function(ess, param) {
 posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
   require(coda)
 
-  mb <- summary(mcmc[[term]], quantiles = NULL)[[1]]
+  if (term == 'Omega') {
+    mb <- summary(mcmc[[term]][[1]], quantiles = NULL)[[1]]
+  } else {
+    mb <- summary(mcmc[[term]], quantiles = NULL)[[1]]
+  }
   mb <- data.frame(term = row.names(mb), mean = mb[, 1], row.names = NULL)
 
   hp <- coda::HPDinterval(mcmc[[term]], prob = prob)
@@ -287,20 +291,5 @@ posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
   hpd$var <- var
 
   return(hpd)
-
-}
-#' @rdname helpers
-#' @export
-NEON_div_full_400 <- function() {
-  # gets all subplots necessary to pool presence/absence by the full 400-m quad
-
-  # 31.1.10 + 31.1.1 + 34.4.10 + 34.4.1 + 32.2.10 + 32.2.1 + 32.4.10 + 32.4.1 +
-  # 40.1.10 + 40.1.1 + 40.3.10 + 40.3.1 + 41.1.10 + 41.1.1 + 41.4.10 + 41.4.1
-  f0 <- c(
-    '31.1.10', '31.1.1','34.4.10', '34.4.1', '32.2.10', '32.2.1', '32.4.10', '32.4.1',
-    '40.1.10', '40.1.1', '40.3.10', '40.3.1', '41.1.10', '41.1.1', '41.4.10', '41.4.1'
-  )
-
-  return(f0)
 
 }

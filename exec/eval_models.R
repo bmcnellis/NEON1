@@ -3,7 +3,12 @@
 set.seed(1)
 
 # TODO:
-#      implement cross-validation
+#      Get validation statistics for the two models:
+#          Rhat, ESS, RMSE/R2, PSRF
+#      Make plots for both models
+#          Variance partitioning
+#          Beta/Gamma parameter estimates with HPD
+#          Species residual correlations
 
 # Caveats/Considerations:
 #     * taxon not identified to species are excluded
@@ -46,39 +51,31 @@ stopifnot(
   file.exists(file.path(mod_dir, 'm_p_diag.rda'))
 )
 
-### Load data
-load(file.path(mod_dir, 'm_p_mod.rda'))
-load(file.path(mod_dir, 'm_p_diag.rda'))
+### Load data for model 1
+load(file.path(mod_dir, 'm_p_mod0.rda'))
+load(file.path(mod_dir, 'm_p_diag0.rda'))
 
 ### Evaluate
 
 ## Cross-validation
 
-## Posterior predictive checks
+## Rhat
+# mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.
+# uses **$Rhat
+
+## ESS
+# mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.
+# uses **n.eff
 
 ## pp_check using bayesplot::
 NEON1::pp_check(m_p = m_p, mp_pp = mp_pp, 2000)
-
-## Effective sample size
-hist(es_p_beta, breaks = 30, main = 'ess:Beta, model p')
-hist(es_p_gamm, breaks = 30, main = 'ess:Gamma, model p')
-hist(es_p_omeg, breaks = 30, main = 'ess:Omega, model p')
-# which species have low ess?
-es_p_beta <- NEON1::ess_as_df(es_p_beta, 'beta')
-es_p_beta_spp <- summarise(group_by(es_p_beta, spp), ess_mean = mean(ess), ess_sd = sd(ess)/n())
-es_p_beta_param <- summarise(group_by(es_p_beta, param), ess_mean = mean(ess), ess_sd = sd(ess)/n())
-NEON1::ess_plot(es_p_beta_spp, spp, 'ESS (Beta)')
-NEON1::ess_plot(es_p_beta_param, param, 'ESS (Beta)')
-
-MCMCvis::MCMCsummary(mc_p$Beta)
 
 ## RMSE/R2
 hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)), breaks = 30)
 # RMSE for probit, R2 for others
 
 ## Gelman's PSRF (Potential Scale Reduction Factor)
-# Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
-# Journal of Computational and Graphical Statistics, 7, 434-455.
+# not sure what to do with this - report in table?
 hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
 table(abs(gd_p_beta[, 1] - 1) > 0.01)
 gd_p_beta[which(abs(gd_p_beta[, 1] - 1) > 0.01), ]
@@ -100,28 +97,11 @@ round(m_vp$R2T$Y * 100, 2)
 # not much, 0.47%
 
 ## Parameter means and highest posterior density intervals (HPD)
-post_beta <- NEON1::posterior_from_coda(mc_p, 'Beta', 0.9, average = T, drop_ns = T)
 # only plot elevation, pai, age_median because those are standardized
-post_beta <- post_beta[which(post_beta$var %in% c('elevation', 'pai', 'age_median')), ]
+post_beta <- post_beta_0[which(post_beta$var %in% c('elevation', 'pai', 'age_median')), ]
 post_beta$var <- ifelse(post_beta$var == 'age_median', 'Flow age', post_beta$var)
 post_beta$var <- ifelse(post_beta$var == 'elevation', 'Elevation', post_beta$var)
 post_beta$var <- ifelse(post_beta$var == 'pai', 'Plant area index', post_beta$var)
 post_beta$spp <- gsub('_', ' ', post_beta$spp)
 
 NEON1::param_plot(post_beta, 'Parameter effect (Beta)')
-
-### old crap
-
-plotBeta(m_p, post = ml_pb, param = 'Support', supportLevel = 0.90)
-plotBeta(m_p, post = ml_pb, param = 'Mean', supportLevel = 0.90)
-plotGamma(m_p, post = ml_pg, param = 'Support', supportLevel = 0.90)
-knitr::kable(m_vp$R2T$Beta)
-
-# i think this is now ma_p
-sl <- 0.5
-cp <- ((m_ca[[1]]$support > sl) + (m_ca[[1]]$support < (1 - sl)) > 0) * m_ca[[1]]$mean
-corrplot::corrplot(
-  cp, method = 'color', col = colorRampPalette(c('blue', 'white', 'red'))(200),
-  title = paste('random effect level:', m_p$rLNames[1]), mar = c(0, 0, 1, 0)
-)
-
