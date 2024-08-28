@@ -10,17 +10,12 @@ set.seed(1)
 #          Beta/Gamma parameter estimates with HPD
 #          Species residual correlations
 
-# Caveats/Considerations:
-#     * taxon not identified to species are excluded
-#     * two enclosures (Kata-Stein & Unencumbered Kulani Pasture) had NA for completion date, this
-#       was set to 2014 which is the age of the youngest bordering enclosure
-#     * lava flow age is the median of the age range published on USGS maps
-#     * pai, elev, age_median are centered and scaled
-#     * time_since_fence NOT centered or scaled
-#     * one enclosure (Army Road) was listed as NOT ungulate-free, time_since_fence set to 0
-
-# "All variance partitioning values for each species were multiplied by the explanatory R2 value of that species to show amount
-# of total variation in the response variable explained by each covariate."
+# Motivation:
+#
+# Model diagnostics fall into two categories: model performance in a technical sense, and model performance in a scientific sense
+#
+# TECHNICAL: Rhat, ESS (in part), pp_check, PSRF
+# SCIENTIFIC: ESS (in part), RMSE, xv-RMSE, variance partitioning
 
 ### Libraries
 library(NEON1)
@@ -31,7 +26,7 @@ library(bayesplot)
 library(MCMCvis)
 
 # model parameters
-s0 <- c(13000, 3000, 6, 6) # iterations, burn, chains, parallel
+s0 <- c(6000, 2000, 4, 4) # iterations, burn, chains, parallel
 s1 <- (s0[1] - s0[2]) * s0[3] # for ES
 
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
@@ -47,21 +42,52 @@ stopifnot(
   dir.exists(res_dir),
   dir.exists(mod_dir),
   dir.exists(fig_dir),
-  file.exists(file.path(mod_dir, 'm_p_mod.rda')),
-  file.exists(file.path(mod_dir, 'm_p_diag.rda'))
+  file.exists(file.path(mod_dir, 'm_p_mod0.rda')),
+  file.exists(file.path(mod_dir, 'm_p_diag0.rda')),
+  file.exists(file.path(mod_dir, 'm_p_mod1.rda')),
+  file.exists(file.path(mod_dir, 'm_p_diag1.rda'))
 )
 
-### Load data for model 1
+### Load data for models
 load(file.path(mod_dir, 'm_p_mod0.rda'))
 load(file.path(mod_dir, 'm_p_diag0.rda'))
+load(file.path(mod_dir, 'm_p_mod1.rda'))
+load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ### Evaluate
 
-## Cross-validation
+## Trace plots
+# trace plot figures are in fig_dir
 
 ## Rhat
-# mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.
-# uses **$Rhat
+rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.02), ]
+table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
+sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
+# most of the rhat problems in beta_0 are from Axonopus_fissifolius and Cheirodendron_trigynum (17 / 27)
+rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.02), ]
+# only 1 rhat problem for gamm_0, which was pai/z_I, at rhat = 1.03
+rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.02), ]
+t0 <- table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[1]))
+names(t0) <- gsub('Omega1\\[', '', names(t0))
+t0 <- colSums(dplyr::bind_rows(t0, table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3]))), na.rm = T)
+sum(t0)
+# 90 / 270 rhat issues came from Cheirodendron_trigynum, with Eragrostis_cumingii at 18 and Alyxia_stellata at 12
+
+rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.02), ]
+table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3]))
+sum(table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])))
+# no strong patterns in model 1 rhat issues, 36 issues spread evenly over 28 species
+# almost all issues related to cover_typeohia_woodland though...
+rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.02), ]
+# only 1 rhat problem for gamm_1, which was cover_typeohia_woodland/Intercept at 1.03
+rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.02), ]
+t1 <- table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[1]))
+names(t1) <- gsub('Omega1\\[', '', names(t1))
+t1 <- colSums(dplyr::bind_rows(t1, table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[3]))), na.rm = T)
+sum(t1)
+# no strong issues with anything here, at most 6/8 issues
+
+
 
 ## ESS
 # mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.
@@ -73,17 +99,6 @@ NEON1::pp_check(m_p = m_p, mp_pp = mp_pp, 2000)
 ## RMSE/R2
 hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)), breaks = 30)
 # RMSE for probit, R2 for others
-
-## Gelman's PSRF (Potential Scale Reduction Factor)
-# not sure what to do with this - report in table?
-hist(gd_p_beta, breaks = 30, main = 'psrf:Beta, model p')
-table(abs(gd_p_beta[, 1] - 1) > 0.01)
-gd_p_beta[which(abs(gd_p_beta[, 1] - 1) > 0.01), ]
-hist(gd_p_gamm, breaks = 30, main = 'psrf:Gamma, model p')
-hist(gd_p_omeg, breaks = 30, main = 'psrf:Omega, model p')
-hist(gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.01), 1], breaks = 30)
-table(abs(gd_p_omeg[, 1] - 1) > 0.01)
-gd_p_omeg[which(abs(gd_p_omeg[, 1] - 1) > 0.01), ]
 
 ### Generating data/eval for figures
 

@@ -260,12 +260,13 @@ posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
 
   if (term == 'Omega') {
     mb <- summary(mcmc[[term]][[1]], quantiles = NULL)[[1]]
+    mb <- data.frame(term = row.names(mb), mean = mb[, 1], row.names = NULL)
+    hp <- coda::HPDinterval(mcmc[[term]][[1]], prob = prob)
   } else {
     mb <- summary(mcmc[[term]], quantiles = NULL)[[1]]
+    mb <- data.frame(term = row.names(mb), mean = mb[, 1], row.names = NULL)
+    hp <- coda::HPDinterval(mcmc[[term]], prob = prob)
   }
-  mb <- data.frame(term = row.names(mb), mean = mb[, 1], row.names = NULL)
-
-  hp <- coda::HPDinterval(mcmc[[term]], prob = prob)
 
   for (i in seq_along(hp)) colnames(hp[[i]]) <- paste(colnames(hp[[i]]), i, sep = '_')
   hp <- do.call('cbind', hp)

@@ -24,7 +24,9 @@ library(coda)
 library(MCMCvis)
 
 # model parameters
-s0 <- c(13000, 3000, 6, 6)# iterations, burn, chains, parallel
+#s0 <- c(6000, 2000, 4, 4)# iterations, burn, chains, parallel
+# need at least 4k burn-in and more than 4 chains for problematic species (e.g. CHITRI)
+s0 <- c(11000, 4000, 8, 8)
 
 dir0 <- '/media/bem/data/NEON'
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
@@ -34,6 +36,8 @@ data_dir <- dir0
 res_dir <- file.path(dir0, 'results')
 mod_dir <- file.path(dir0, 'results/model_results')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
+
+bad_spp <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius')
 
 ### Data import
 
@@ -87,6 +91,8 @@ df0 <- df0 |>
   # 93 species
   filter(binomialName %in% drop_spp) |>
   # 45 species
+  filter(!(binomialName %in% bad_spp)) |>
+  # 43 species
   # assume all NI? are N
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
@@ -140,6 +146,8 @@ df1 <- df1 |>
   # 134 species
   filter(binomialName %in% drop_spp) |>
   # 79 species
+  filter(!(binomialName %in% bad_spp)) |>
+  # 77 species
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
   # center/scale and fix for Hmsc inputs
@@ -309,27 +317,26 @@ gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = F)$psrf
 gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = F)$psrf
 gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = F)$psrf
 
+# Trace plots
+MCMCvis::MCMCtrace(mc_p_0$Beta)
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_beta.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+MCMCvis::MCMCtrace(mc_p_0$Gamma)
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_gamma.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_omega.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+
+MCMCvis::MCMCtrace(mc_p_1$Beta)
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_beta.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+MCMCvis::MCMCtrace(mc_p_1$Gamma)
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_gamma.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
+file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_omega.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+
 save(list = c('m_p_1', 'mc_p_1', 'ma_p_1', 'mp_p_1', 'mp_pp_1'), file = file.path(mod_dir, 'm_p_mod1.rda'))
 save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1', 'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1', 'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda'))
-
-# cross-validation
-nf <- c(2, 5, 10)
-xv_0 <- vector('list', length(nf))
-xv_mf_0 <- vector('list', length(nf))
-xv_1 <- vector('list', length(nf))
-xv_mf_1 <- vector('list', length(nf))
-
-for (i in seq_along(nf)) {
-  ip_0 <- Hmsc::createPartition(m_p_0, nfolds = nf[i])
-  ip_1 <- Hmsc::createPartition(m_p_1, nfolds = nf[i])
-  ipv_0 <- Hmsc::computePredictedValues(m_p_0, partition = ip_0, nParallel = s0[4])
-  ipv_1 <- Hmsc::computePredictedValues(m_p_1, partition = ip_1, nParallel = s0[4])
-  ipmf_0 <- Hmsc::evaluateModelFit(hM = m_p_0, predY = ipv_0)
-  ipmf_1 <- Hmsc::evaluateModelFit(hM = m_p_1, predY = ipv_1)
-  xv_0[[i]] <- ipv_0
-  xv_1[[i]] <- ipv_1
-  xv_mf_0[[i]] <- ipmf_0
-  xv_mf_1[[i]] <- ipmf_1
-}
-save(list = c('xv_0', 'xv_mf_0'), file = file.path(mod_dir, 'm_p_xv0.rda'))
-save(list = c('xv_1', 'xv_mf_1'), file = file.path(mod_dir, 'm_p_xv1.rda'))
