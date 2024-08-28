@@ -44,7 +44,8 @@ mod_dir <- file.path(dir0, 'results/model_results')
 fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
-bad_spp <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius')
+bad_spp_0 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Uncinia_uncinata', 'Styphelia_tameiameiae')
+bad_spp_1 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Coprosma_ochracea')
 
 ### Data import
 
@@ -98,8 +99,8 @@ df0 <- df0 |>
   # 93 species
   filter(binomialName %in% drop_spp) |>
   # 45 species
-  filter(!(binomialName %in% bad_spp)) |>
-  # 43 species
+  filter(!(binomialName %in% bad_spp_0)) |>
+  # 41 species
   # assume all NI? are N
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
@@ -153,8 +154,8 @@ df1 <- df1 |>
   # 134 species
   filter(binomialName %in% drop_spp) |>
   # 79 species
-  filter(!(binomialName %in% bad_spp)) |>
-  # 77 species
+  filter(!(binomialName %in% bad_spp_1)) |>
+  # 76 species
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
   # center/scale and fix for Hmsc inputs
@@ -352,8 +353,6 @@ save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_
 MCMCvis::MCMCtrace(mc_p_0$Beta)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-# Trichomanes bauerianum/time_since_fence wobbly between chains
-# Stenogyne calamintho.. pretty wobbly for all variables, especially time_since_fence and cover_typekoa_tall
 MCMCvis::MCMCtrace(mc_p_0$Gamma)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
@@ -364,8 +363,6 @@ file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Beta)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-# two Cyrtandra species are a little squirly
-# Stenogyne calamintho.. somewhat weird for cover_typeohia_woodland
 MCMCvis::MCMCtrace(mc_p_1$Gamma)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')

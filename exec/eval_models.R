@@ -61,32 +61,31 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
-rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.02), ]
+rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
-# most of the rhat problems in beta_0 are from Axonopus_fissifolius and Cheirodendron_trigynum (17 / 27)
-rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.02), ]
-# only 1 rhat problem for gamm_0, which was pai/z_I, at rhat = 1.03
-rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.02), ]
+# only 3 bad rhats (1.03, 1.02, 1.03)
+rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.01), ]
+# no bad rhat
+rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.05), ]
+# way worse rhats, 12 terms > 1.05 :Uncinia_uncinata and Styphelia_tameiameiae are the only two that aren't autocorrelation problems
 t0 <- table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[1]))
 names(t0) <- gsub('Omega1\\[', '', names(t0))
 t0 <- colSums(dplyr::bind_rows(t0, table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3]))), na.rm = T)
 sum(t0)
-# 90 / 270 rhat issues came from Cheirodendron_trigynum, with Eragrostis_cumingii at 18 and Alyxia_stellata at 12
 
-rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.02), ]
+rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.01), ]
 table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])))
-# no strong patterns in model 1 rhat issues, 36 issues spread evenly over 28 species
-# almost all issues related to cover_typeohia_woodland though...
-rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.02), ]
-# only 1 rhat problem for gamm_1, which was cover_typeohia_woodland/Intercept at 1.03
-rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.02), ]
+# 19 bad parameters, all but 2 related to cover_typeohia_woodland
+rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.01), ]
+# no bad parameters
+rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.01), ]
 t1 <- table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[1]))
 names(t1) <- gsub('Omega1\\[', '', names(t1))
 t1 <- colSums(dplyr::bind_rows(t1, table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[3]))), na.rm = T)
 sum(t1)
-# no strong issues with anything here, at most 6/8 issues
+# 18 bad params, Coprosma_ochracea is only non-autocorrelation problem
 
 
 
