@@ -44,8 +44,8 @@ mod_dir <- file.path(dir0, 'results/model_results')
 fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
-bad_spp_0 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Uncinia_uncinata', 'Styphelia_tameiameiae')
-bad_spp_1 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Coprosma_ochracea')
+bad_spp_0 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Uncinia_uncinata', 'Styphelia_tameiameiae', 'Stenogyne_calaminthoides', 'Trichomanes_bauerianum', 'Myrsine_lessertiana')
+bad_spp_1 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Coprosma_ochracea', 'Microlaena_stipoides')
 
 ### Data import
 
@@ -369,3 +369,5 @@ file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
+
+source('./exec/do_model_xv.R')

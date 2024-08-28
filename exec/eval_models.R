@@ -62,30 +62,42 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
 rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
+rhat_beta_0
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
-# only 3 bad rhats (1.03, 1.02, 1.03)
+# 7 bad terms, 3 are Hypochaeris_radicata, rest: Hedyotis_terminalis, Hymenophyllum_recurvum, Stenogyne_calaminthoides, Trichomanes_bauerianum
 rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.01), ]
+rhat_gamm_0
 # no bad rhat
-rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.05), ]
-# way worse rhats, 12 terms > 1.05 :Uncinia_uncinata and Styphelia_tameiameiae are the only two that aren't autocorrelation problems
+rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.01), ]
+rhat_omeg_0
+# Adenophorus_tamariscinus, Coprosma_ernodeoides, Stenogyne_calaminthoides minor offendors
+# Trichomanes_bauerianum, Myrsine_lessertiana major offenders
 t0 <- table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[1]))
 names(t0) <- gsub('Omega1\\[', '', names(t0))
 t0 <- colSums(dplyr::bind_rows(t0, table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3]))), na.rm = T)
 sum(t0)
 
 rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.01), ]
+rhat_beta_1
 table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])))
-# 19 bad parameters, all but 2 related to cover_typeohia_woodland
+# 15 bad parameters, mostly cover_typeohia_woodland
+# Elaphoglossum_alatum, Freycinetia_arborea, Pneumatopteris_sandwicensis x2 each
+# Adenophorus_tamariscinus, Hymenophyllum_lanceolatum, Hymenophyllum_recurvum, Metrosideros_polymorpha,
+# Psidium_cattleianum, Psilotum_complanatum, Stenogyne_calaminthoides, Trichomanes_bauerianum x1
+# but all Rhats are = 1.02 and n.eff is relatively large
 rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.01), ]
+rhat_gamm_1
 # no bad parameters
 rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.01), ]
+rhat_omeg_1
 t1 <- table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[1]))
 names(t1) <- gsub('Omega1\\[', '', names(t1))
 t1 <- colSums(dplyr::bind_rows(t1, table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[3]))), na.rm = T)
 sum(t1)
-# 18 bad params, Coprosma_ochracea is only non-autocorrelation problem
+# 13 bad params
+# Microlaena_stipoides is only potential issue, although some Rhats are large
 
 
 
