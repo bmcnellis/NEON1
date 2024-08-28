@@ -276,9 +276,9 @@ post_omeg_0 <- NEON1::posterior_from_coda(mc_p_0, 'Omega', 0.9, average = T, dro
 ## Gelman's PSRF (Potential Scale Reduction Factor)
 # Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
 # Journal of Computational and Graphical Statistics, 7, 434-455.
-gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = F)$psrf
-gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = F)$psrf
-gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = F)$psrf
+gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = T)$psrf
+gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = T)$psrf
+gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = T)$psrf
 
 save(list = c('m_p_0', 'mc_p_0', 'ma_p_0', 'mp_p_0', 'mp_pp_0'), file = file.path(mod_dir, 'm_p_mod0.rda'))
 save(list = c('mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_omeg_0', 'gd_p_beta_0', 'gd_p_omeg_0', 'gd_p_gamm_0', 'post_beta_0', 'post_gamm_0', 'post_omeg_0'), file = file.path(mod_dir, 'm_p_diag0.rda'))
@@ -313,9 +313,9 @@ post_omeg_1 <- NEON1::posterior_from_coda(mc_p_1, 'Omega', 0.9, average = T, dro
 ## Gelman's PSRF (Potential Scale Reduction Factor)
 # Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
 # Journal of Computational and Graphical Statistics, 7, 434-455.
-gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = F)$psrf
-gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = F)$psrf
-gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = F)$psrf
+gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = T)$psrf
+gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = T)$psrf
+gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = T)$psrf
 
 # Trace plots
 MCMCvis::MCMCtrace(mc_p_0$Beta)
