@@ -26,7 +26,7 @@ library(bayesplot)
 library(MCMCvis)
 
 # model parameters
-s0 <- c(6000, 2000, 4, 4) # iterations, burn, chains, parallel
+s0 <- c(11000, 4000, 8, 8) # iterations, burn, chains, parallel
 s1 <- (s0[1] - s0[2]) * s0[3] # for ES
 
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
@@ -60,6 +60,7 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 # trace plot figures are in fig_dir
 
 ## Rhat
+# Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
 rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.02), ]
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))

@@ -16,6 +16,12 @@ set.seed(1)
 # "All variance partitioning values for each species were multiplied by the explanatory R2 value of that species to show amount
 # of total variation in the response variable explained by each covariate."
 
+# Relevant to BRMS methods:
+# "A simple way to incorporate correlation is to introduce it indirectly via a random univariate effect
+# applied to each sample [24]. The presence of a common random effect across taxa in a sample
+# induces a constant positive covariance between taxa. However, one would rarely expect
+# covariance across all taxa to be constant or always positive.""
+
 ### Libraries
 library(NEON1)
 library(dplyr)
@@ -35,6 +41,7 @@ dir0 <- '/media/bem/data/NEON'
 data_dir <- dir0
 res_dir <- file.path(dir0, 'results')
 mod_dir <- file.path(dir0, 'results/model_results')
+fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
 bad_spp <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius')
@@ -246,6 +253,22 @@ rL1 <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
 # how sampling units (subjects and items) vary, and the structure of dependency that this variation creates in one’s data."
 # - Barr et al. 2014
 
+# example script code:
+#study_design = str_split(rownames(X_250), pattern = "_", simplify = T) %>%
+#  as_tibble() %>%
+#  mutate_each(funs = as.integer) %>%
+#  set_names(c("samplearea_id_250", "year")) %>%
+#  left_join(unique(sample_areas[,c("samplearea_id", "samplearea_id_250")]), by = "samplearea_id_250") %>%
+#  dplyr::select(samplearea_id, samplearea_id_250, year) %>%
+#  mutate_each(funs = as_factor)
+#random_levels = list("samplearea_id" = HmscRandomLevel(units = unique(study_design$samplearea_id)),
+#                     "samplearea_id_250" = HmscRandomLevel(units = unique(study_design$samplearea_id_250)),
+#                     "year" = HmscRandomLevel(units = unique(study_design$year)))
+#model_occ_250 = Hmsc(Y = as.matrix(Y_250_occ), XData = X_250, XFormula = ~., distr = "probit",
+#                     studyDesign = as.data.frame(study_design), ranLevels = random_levels)
+#model_abund_250 = Hmsc(Y = as.matrix(Y_250_abund), XData = X_250, XFormula = ~., distr = "lognormal poisson",
+#                       studyDesign = as.data.frame(study_design), ranLevels = random_levels)
+
 # fit
 # presence/absence probit model
 # using only 1-m data
@@ -278,7 +301,11 @@ post_omeg_0 <- NEON1::posterior_from_coda(mc_p_0, 'Omega', 0.9, average = T, dro
 # Journal of Computational and Graphical Statistics, 7, 434-455.
 gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = T)$psrf
 gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = T)$psrf
-gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = T)$psrf
+# multivariate = T fails here, see:
+# https://stackoverflow.com/questions/57501259/coda-gelman-diag-error-in-chol-defaultw-the-leading-minor-of-order-nn-is
+#gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = T)$psrf
+gd_p_omeg_0 <- "did not work"
+# i'm not sure how much it matters if we're just gonna use rhat from MCMCvis
 
 save(list = c('m_p_0', 'mc_p_0', 'ma_p_0', 'mp_p_0', 'mp_pp_0'), file = file.path(mod_dir, 'm_p_mod0.rda'))
 save(list = c('mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_omeg_0', 'gd_p_beta_0', 'gd_p_omeg_0', 'gd_p_gamm_0', 'post_beta_0', 'post_gamm_0', 'post_omeg_0'), file = file.path(mod_dir, 'm_p_diag0.rda'))
@@ -315,12 +342,18 @@ post_omeg_1 <- NEON1::posterior_from_coda(mc_p_1, 'Omega', 0.9, average = T, dro
 # Journal of Computational and Graphical Statistics, 7, 434-455.
 gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = T)$psrf
 gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = T)$psrf
-gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = T)$psrf
+#gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = T)$psrf
+gd_p_omeg_1 <- "did not work"
+
+save(list = c('m_p_1', 'mc_p_1', 'ma_p_1', 'mp_p_1', 'mp_pp_1'), file = file.path(mod_dir, 'm_p_mod1.rda'))
+save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1', 'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1', 'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda'))
 
 # Trace plots
 MCMCvis::MCMCtrace(mc_p_0$Beta)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
+# Trichomanes bauerianum/time_since_fence wobbly between chains
+# Stenogyne calamintho.. pretty wobbly for all variables, especially time_since_fence and cover_typekoa_tall
 MCMCvis::MCMCtrace(mc_p_0$Gamma)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
@@ -331,12 +364,11 @@ file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Beta)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
+# two Cyrtandra species are a little squirly
+# Stenogyne calamintho.. somewhat weird for cover_typeohia_woodland
 MCMCvis::MCMCtrace(mc_p_1$Gamma)
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-
-save(list = c('m_p_1', 'mc_p_1', 'ma_p_1', 'mp_p_1', 'mp_pp_1'), file = file.path(mod_dir, 'm_p_mod1.rda'))
-save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1', 'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1', 'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda'))

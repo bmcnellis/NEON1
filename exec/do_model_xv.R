@@ -7,7 +7,7 @@ library(NEON1)
 library(Hmsc)
 
 # model parameters
-s0 <- c(6000, 2000, 4, 4)# iterations, burn, chains, parallel
+s0 <- c(11000, 4000, 8, 8) # iterations, burn, chains, parallel
 
 dir0 <- '/media/bem/data/NEON'
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
