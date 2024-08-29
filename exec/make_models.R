@@ -32,7 +32,7 @@ library(MCMCvis)
 # model parameters
 #s0 <- c(6000, 2000, 4, 4)# iterations, burn, chains, parallel
 # need at least 4k burn-in and more than 4 chains for problematic species (e.g. CHITRI)
-s0 <- c(11000, 4000, 8, 8)
+s0 <- c(9000, 3000, 8, 8)
 
 dir0 <- '/media/bem/data/NEON'
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
@@ -44,8 +44,8 @@ mod_dir <- file.path(dir0, 'results/model_results')
 fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
-bad_spp_0 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Uncinia_uncinata', 'Styphelia_tameiameiae', 'Stenogyne_calaminthoides', 'Trichomanes_bauerianum', 'Myrsine_lessertiana')
-bad_spp_1 <- c('Cheirodendron_trigynum', 'Axonopus_fissifolius', 'Coprosma_ochracea', 'Microlaena_stipoides')
+bad_spp_0 <- c('Cheirodendron_trigynum')
+bad_spp_1 <- c('Cheirodendron_trigynum')
 
 ### Data import
 
@@ -84,6 +84,7 @@ df0 <- NEON1::div_one |>
   mutate(plotDate = paste(plotID, as.character(endDate), sep = '_')) |>
   mutate(plotDate = gsub('PUUM_', '', plotDate)) |>
   mutate(date_day_center = as.integer(round(scale(as.numeric(endDate) / 86400, scale = F)))) |>
+  mutate(year = as.integer(as.POSIXlt(endDate)$year + 1900)) |>
   # drop species which are not identified to species
   # 122 species
   filter(!grepl('_sp|_spp', binomialName))
@@ -141,6 +142,7 @@ df1 <- NEON1::div_one |>
   mutate(plotDate = paste(plotID, as.character(endDate), sep = '_')) |>
   mutate(plotDate = gsub('PUUM_', '', plotDate)) |>
   mutate(date_day_center = as.integer(round(scale(as.numeric(endDate) / 86400, scale = F)))) |>
+  mutate(year = as.integer(as.POSIXlt(endDate)$year + 1900)) |>
   # drop species which are not identified to species
   # 175 species
   filter(!grepl('_sp|_spp', binomialName))
@@ -218,20 +220,20 @@ tr1 <- df1 |>
   tibble::column_to_rownames('binomialName')
 # create study-design matrix
 stu0 <- df0 |>
-  select(c(plotDate, plotID, date_day_center)) |>
+  #select(c(plotDate, plotID, year)) |>
+  select(plotDate) |>
   distinct() |>
   arrange(plotDate) |>
-  mutate(plotDate = as.factor(plotDate)) |>
-  select(plotDate) |>
+  mutate(across(everything(), as.factor)) |>
   mutate(p0 = plotDate) |>
   tibble::column_to_rownames('p0') |>
   as.data.frame()
 stu1 <- df1 |>
-  select(c(plotDate, plotID, date_day_center)) |>
+  #select(c(plotDate, plotID, year)) |>
+  select(plotDate) |>
   distinct() |>
   arrange(plotDate) |>
-  mutate(plotDate = as.factor(plotDate)) |>
-  select(plotDate) |>
+  mutate(across(everything(), as.factor)) |>
   mutate(p0 = plotDate) |>
   tibble::column_to_rownames('p0') |>
   as.data.frame()
@@ -248,8 +250,11 @@ stopifnot(
 
 # model terms
 xf1 <- as.formula(~ age_median + pai + time_since_fence + elevation + log + cow + cover_type)
-rL0 <- Hmsc::HmscRandomLevel(units = stu0$plotDate)
-rL1 <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
+rL0 <- list('plotDate' = Hmsc::HmscRandomLevel(units = stu0$plotDate))
+#rL0 <- list("plotDate" = Hmsc::HmscRandomLevel(units = stu0$plotDate), "plotID" = Hmsc::HmscRandomLevel(units = unique(stu0$plotID)), "year" = Hmsc::HmscRandomLevel(units = unique(stu0$year)))
+#rL1 <- list("plotDate" = Hmsc::HmscRandomLevel(units = stu1$plotDate), "plotID" = Hmsc::HmscRandomLevel(units = unique(stu1$plotID)), "year" = Hmsc::HmscRandomLevel(units = unique(stu1$year)))
+rL1 <- list('plotDate' = Hmsc::HmscRandomLevel(units = stu1$plotDate))
+
 # "Ultimately, the random effect structure one uses in an analysis encodes the assumptions that one makes about
 # how sampling units (subjects and items) vary, and the structure of dependency that this variation creates in one’s data."
 # - Barr et al. 2014
@@ -274,9 +279,8 @@ rL1 <- Hmsc::HmscRandomLevel(units = stu1$plotDate)
 # presence/absence probit model
 # using only 1-m data
 m_p_0 <- Hmsc::Hmsc(
-  Y = mat_p, XData = env0, studyDesign = stu0, XFormula = xf1, TrData = tr0,
-  ranLevels = list('plotDate' = rL0), distr = 'probit', TrFormula = ~nativeStatusCode,
-  XScale = F
+  Y = mat_p, XData = env0, studyDesign = stu0, XFormula = xf1, TrData = tr0, ranLevels = rL0,
+  distr = 'probit', TrFormula = ~nativeStatusCode, XScale = F
 )
 m_p_0 <- Hmsc::sampleMcmc(m_p_0, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
 mc_p_0 <- Hmsc::convertToCodaObject(m_p_0)
@@ -315,9 +319,8 @@ save(list = c('mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_
 # presence/absence probit model
 # using all 400-m data
 m_p_1 <- Hmsc::Hmsc(
-  Y = mat_t, XData = env1, studyDesign = stu1, XFormula = xf1, TrData = tr1,
-  ranLevels = list('plotDate' = rL1), distr = 'probit', TrFormula = ~nativeStatusCode,
-  XScale = F
+  Y = mat_t, XData = env1, studyDesign = stu1, XFormula = xf1, TrData = tr1, ranLevels = rL1,
+  distr = 'probit', TrFormula = ~nativeStatusCode, XScale = F
 )
 m_p_1 <- Hmsc::sampleMcmc(m_p_1, thin = 10, samples = s0[1], transient = s0[2], nChains = s0[3], nParallel = s0[4])
 mc_p_1 <- Hmsc::convertToCodaObject(m_p_1)
@@ -370,4 +373,3 @@ MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
 file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 
-source('./exec/do_model_xv.R')

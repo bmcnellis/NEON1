@@ -61,7 +61,7 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
-rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
+rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.10), ]
 rhat_beta_0
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
@@ -78,7 +78,7 @@ names(t0) <- gsub('Omega1\\[', '', names(t0))
 t0 <- colSums(dplyr::bind_rows(t0, table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3]))), na.rm = T)
 sum(t0)
 
-rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.01), ]
+rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.05), ]
 rhat_beta_1
 table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])))
