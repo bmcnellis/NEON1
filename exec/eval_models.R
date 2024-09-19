@@ -26,11 +26,12 @@ library(bayesplot)
 library(MCMCvis)
 
 # model parameters
-s0 <- c(11000, 4000, 8, 8) # iterations, burn, chains, parallel
+s0 <- c(6000, 3000, 4, 4) # iterations, burn, chains, parallel
 s1 <- (s0[1] - s0[2]) * s0[3] # for ES
 
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
-dir0 <- '/media/bem/data/NEON'
+dir0 <- '..'
+#dir0 <- '/media/bem/data/NEON'
 
 ### Directories
 data_dir <- dir0
@@ -61,7 +62,7 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
-rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.10), ]
+rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
 rhat_beta_0
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
@@ -98,8 +99,6 @@ t1 <- colSums(dplyr::bind_rows(t1, table(sapply(strsplit(row.names(rhat_omeg_1),
 sum(t1)
 # 13 bad params
 # Microlaena_stipoides is only potential issue, although some Rhats are large
-
-
 
 ## ESS
 # mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.

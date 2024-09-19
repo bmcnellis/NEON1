@@ -32,10 +32,10 @@ library(MCMCvis)
 # model parameters
 #s0 <- c(6000, 2000, 4, 4)# iterations, burn, chains, parallel
 # need at least 4k burn-in and more than 4 chains for problematic species (e.g. CHITRI)
-s0 <- c(9000, 3000, 8, 8)
+s0 <- c(6000, 3000, 4, 4)
 
-dir0 <- '/media/bem/data/NEON'
-#dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
+#dir0 <- '/media/bem/data/NEON'
+dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories
 data_dir <- dir0
@@ -304,16 +304,20 @@ post_omeg_0 <- NEON1::posterior_from_coda(mc_p_0, 'Omega', 0.9, average = T, dro
 ## Gelman's PSRF (Potential Scale Reduction Factor)
 # Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
 # Journal of Computational and Graphical Statistics, 7, 434-455.
-gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = T)$psrf
-gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = T)$psrf
+#gd_p_beta_0 <- coda::gelman.diag(mc_p_0$Beta, multivariate = T)$psrf
+#gd_p_gamm_0 <- coda::gelman.diag(mc_p_0$Gamma, multivariate = T)$psrf
 # multivariate = T fails here, see:
 # https://stackoverflow.com/questions/57501259/coda-gelman-diag-error-in-chol-defaultw-the-leading-minor-of-order-nn-is
 #gd_p_omeg_0 <- coda::gelman.diag(mc_p_0$Omega[[1]], multivariate = T)$psrf
-gd_p_omeg_0 <- "did not work"
+#gd_p_omeg_0 <- "did not work"
 # i'm not sure how much it matters if we're just gonna use rhat from MCMCvis
 
 save(list = c('m_p_0', 'mc_p_0', 'ma_p_0', 'mp_p_0', 'mp_pp_0'), file = file.path(mod_dir, 'm_p_mod0.rda'))
-save(list = c('mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_omeg_0', 'gd_p_beta_0', 'gd_p_omeg_0', 'gd_p_gamm_0', 'post_beta_0', 'post_gamm_0', 'post_omeg_0'), file = file.path(mod_dir, 'm_p_diag0.rda'))
+save(list = c(
+  'mf_p_0', 'm_ca_0', 'm_vp_0', 'mc_s_beta_0', 'mc_s_gamm_0', 'mc_s_omeg_0',
+  #'gd_p_beta_0', 'gd_p_omeg_0', 'gd_p_gamm_0',
+  'post_beta_0', 'post_gamm_0', 'post_omeg_0'), file = file.path(mod_dir, 'm_p_diag0.rda')
+)
 
 # fit
 # presence/absence probit model
@@ -344,13 +348,17 @@ post_omeg_1 <- NEON1::posterior_from_coda(mc_p_1, 'Omega', 0.9, average = T, dro
 ## Gelman's PSRF (Potential Scale Reduction Factor)
 # Brooks, SP. and Gelman, A. (1998) General methods for monitoring convergence of iterative simulations.
 # Journal of Computational and Graphical Statistics, 7, 434-455.
-gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = T)$psrf
-gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = T)$psrf
+#gd_p_beta_1 <- coda::gelman.diag(mc_p_1$Beta, multivariate = T)$psrf
+#gd_p_gamm_1 <- coda::gelman.diag(mc_p_1$Gamma, multivariate = T)$psrf
 #gd_p_omeg_1 <- coda::gelman.diag(mc_p_1$Omega[[1]], multivariate = T)$psrf
-gd_p_omeg_1 <- "did not work"
+#gd_p_omeg_1 <- "did not work"
 
 save(list = c('m_p_1', 'mc_p_1', 'ma_p_1', 'mp_p_1', 'mp_pp_1'), file = file.path(mod_dir, 'm_p_mod1.rda'))
-save(list = c('mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1', 'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1', 'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda'))
+save(list = c(
+  'mf_p_1', 'm_ca_1', 'm_vp_1', 'mc_s_beta_1', 'mc_s_gamm_1', 'mc_s_omeg_1',
+  #'gd_p_beta_1', 'gd_p_omeg_1', 'gd_p_gamm_1',
+  'post_beta_1', 'post_gamm_1', 'post_omeg_1'), file = file.path(mod_dir, 'm_p_diag1.rda')
+)
 
 # Trace plots
 MCMCvis::MCMCtrace(mc_p_0$Beta)
