@@ -30,8 +30,8 @@ s0 <- c(6000, 3000, 4, 4) # iterations, burn, chains, parallel
 s1 <- (s0[1] - s0[2]) * s0[3] # for ES
 
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
-dir0 <- '..'
-#dir0 <- '/media/bem/data/NEON'
+#dir0 <- '..'
+dir0 <- '/media/bem/data/NEON'
 
 ### Directories
 data_dir <- dir0
@@ -66,7 +66,6 @@ rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
 rhat_beta_0
 table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
 sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
-# 7 bad terms, 3 are Hypochaeris_radicata, rest: Hedyotis_terminalis, Hymenophyllum_recurvum, Stenogyne_calaminthoides, Trichomanes_bauerianum
 rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.01), ]
 rhat_gamm_0
 # no bad rhat

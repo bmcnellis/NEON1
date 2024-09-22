@@ -1,4 +1,6 @@
-# BEM 29 July 2024
+# BEM
+# created  29 July 2024
+# last run 21 Sep 2024
 
 set.seed(1)
 
@@ -16,12 +18,6 @@ set.seed(1)
 # "All variance partitioning values for each species were multiplied by the explanatory R2 value of that species to show amount
 # of total variation in the response variable explained by each covariate."
 
-# Relevant to BRMS methods:
-# "A simple way to incorporate correlation is to introduce it indirectly via a random univariate effect
-# applied to each sample [24]. The presence of a common random effect across taxa in a sample
-# induces a constant positive covariance between taxa. However, one would rarely expect
-# covariance across all taxa to be constant or always positive.""
-
 ### Libraries
 library(NEON1)
 library(dplyr)
@@ -32,20 +28,64 @@ library(MCMCvis)
 # model parameters
 #s0 <- c(6000, 2000, 4, 4)# iterations, burn, chains, parallel
 # need at least 4k burn-in and more than 4 chains for problematic species (e.g. CHITRI)
-s0 <- c(6000, 3000, 4, 4)
+s0 <- c(8000, 4000, 6, 6)
+# add more when final model is figured out
 
-#dir0 <- '/media/bem/data/NEON'
-dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
+dir0 <- '/media/bem/data/NEON'
+#dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories
 data_dir <- dir0
 res_dir <- file.path(dir0, 'results')
 mod_dir <- file.path(dir0, 'results/model_results')
-fig_dir <- file.path(dir0, 'results/figures')
 stopifnot(all(dir.exists(data_dir), dir.exists(res_dir), dir.exists(mod_dir)))
 
-bad_spp_0 <- c('Cheirodendron_trigynum')
-bad_spp_1 <- c('Cheirodendron_trigynum')
+# DONT REMOVE THE COMMENTED ROUNDS
+# round 1: only CHETRI removed, oc >= 8, 7
+#bad_spp_0 <- c('Cheirodendron_trigynum')
+#bad_spp_1 <- c('Cheirodendron_trigynum')
+# round 2: nothing removed, oc >= 15, 10
+#bad_spp_0 <- character()
+#bad_spp_1 <- character()
+# beta 0 visu: Anthoxanthum, Axonopus, Cheirodendron, C. glaucum, Eragrostis, Hedyotis, Hymenophyllum_recurvum, Hypochaeris_radicata
+# beta 0 rhat: Hypochaeris_radicata, Axonopus_fissifolius, and Eragrostis_cumingiiare are the worst offenders. They are weedy non-natives.
+#              can take out Hypochaeris_radicata first because it probably isn't a species of serious concern
+# gamm 0 visu: OK
+# gamm 0 rhat: because all the beta0 problems are invasives, this will likely be improved
+# beta 1 visu: Adenophorus, Athyrium, C. menzeisii, Cyrtandra spp., Elaphoglossum alatum, Freycinetia, Hedyotis, Hymenophyllum spp., Stenogyne
+# beta 1 rhat: many species, can remove from df 0 first and see how that changes things
+# gamm 0 visu: OK
+# gamm 0 rhat: two problems with intercept, otherwise OK
+# round 3: H radicata removed, oc >= 15, 10
+#bad_spp_0 <- c('Hypochaeris_radicata')
+#bad_spp_1 <- c('Hypochaeris_radicata')
+# removing H radicata made beta 0 a lot better and fixed the gamm issues
+# beta 0 rhat: Hymenophyllum_recurvum has highest Rhat
+# beta 1 rhat: Hymenophyllum_recurvum also present in bad beta 1's
+# round 4: H radicata, H recurvum removed, oc >= 15, 10
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum')
+#bad_spp_1 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum')
+# beta 0 rhat: everything mostly got worse? try dropping Axonopus
+# beta 1 rhat: lots of stuff still bad, try dropping Sticherus_owhyensis
+# round 5: below removed, oc >=15, 10
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius')
+#bad_spp_1 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Sticherus_owhyensis')
+# only 8 bad terms for beta 0, with 7 species, best yet. can try removing Eragrostis_cumingii
+# round 6: removing Axonopus helped, removing Sticherus broke
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius', 'Eragrostis_cumingii')
+#bad_spp_1 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius')
+# round 7: misspelled Axonopus, starting over with beta 0
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius', 'Eragrostis_cumingii')
+#bad_spp_1 <- c('')
+# round 8: removing eragrostis made it worse, trying again with beta 1
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius')
+#bad_spp_1 <- c('Hymenophyllum_lanceolatum')
+# round 9: maybe this is as good as 0 is going to get, try 1 with Coprosma because of Omega1 rhats
+#bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius')
+#bad_spp_1 <- c('Coprosma_granadensis')
+# round 10: 0 left unchanged, 1 oc = 7, no drops, s0 raised to [8000, 4000, 6, 6]
+bad_spp_0 <- c('Hypochaeris_radicata', 'Hymenophyllum_recurvum', 'Axonopus_fissifolius')
+bad_spp_1 <- c('')
 
 ### Data import
 
@@ -90,18 +130,25 @@ df0 <- NEON1::div_one |>
   filter(!grepl('_sp|_spp', binomialName))
   # 93 species
 # drop species which have less than 8 occurences in the entire dataset
-# this represents > 5% of the total possible occurences (142)
+# remaining species represent > 5% of the total possible occurences (142)
 drop_spp <- df0 |>
   group_by(binomialName) |>
   summarise(oc = sum(ifelse(percentCover > 0.001, 1, 0))) |>
-  filter(oc >= 8) |>
+  # 8 / 142 means remaining represent > 5% of total possible occurences
+  #filter(oc >= 8) |>
+  # 15 / 142 means remaining represent > 10% of total possible occurences
+  filter(oc >= 15) |>
   pull(binomialName)
 df0 <- df0 |>
   # 93 species
-  filter(binomialName %in% drop_spp) |>
-  # 45 species
-  filter(!(binomialName %in% bad_spp_0)) |>
-  # 41 species
+  filter(binomialName %in% drop_spp)
+# 45 species if oc >= 8
+# 34 species if oc >= 15
+if (length(bad_spp_0) > 0) {
+  df0 <- df0 |>
+    filter(!(binomialName %in% bad_spp_0))
+}
+df0 <- df0 |>
   # assume all NI? are N
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
@@ -146,18 +193,25 @@ df1 <- NEON1::div_one |>
   # drop species which are not identified to species
   # 175 species
   filter(!grepl('_sp|_spp', binomialName))
-  # 134 specie
+  # 134 species
 drop_spp <- df1 |>
   group_by(binomialName) |>
   summarise(oc = sum(ifelse(count > 0, 1, 0))) |>
-  filter(oc >= 7) |>
+  # 5 / 93 means remaining represent > 5% of total possible occurences
+  filter(oc >= 5) |>
+  # 10 / 93 means remaining represent > 10% of total possible occurences
+  #filter(oc >= 10) |>
   pull(binomialName)
 df1 <- df1 |>
   # 134 species
-  filter(binomialName %in% drop_spp) |>
-  # 79 species
-  filter(!(binomialName %in% bad_spp_1)) |>
-  # 76 species
+  filter(binomialName %in% drop_spp)
+# 88 species if oc >= 5
+# 73 species if oc >= 10
+if (length(bad_spp_1) > 0) {
+  df1 <- df1 |>
+    filter(!(binomialName %in% bad_spp_1))
+}
+df1 <- df1 |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode %in% c('N', 'NI?'), 'N', 'I')) |>
   mutate(nativeStatusCode = ifelse(nativeStatusCode == 'I', 'z_I', nativeStatusCode)) |>
   # center/scale and fix for Hmsc inputs
@@ -362,22 +416,92 @@ save(list = c(
 
 # Trace plots
 MCMCvis::MCMCtrace(mc_p_0$Beta)
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_beta.pdf'), overwrite = T)
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_0$Gamma)
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_gamma.pdf'), overwrite = T)
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_0_omega.pdf'), overwrite = T)
-file.remove('MCMCtrace.pdf')
+#MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
+#file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_omega.pdf'), overwrite = T)
+#file.remove('MCMCtrace.pdf')
 
 MCMCvis::MCMCtrace(mc_p_1$Beta)
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_beta.pdf'), overwrite = T)
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Gamma)
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_gamma.pdf'), overwrite = T)
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_gamma.pdf'), overwrite = T)
+file.remove('MCMCtrace.pdf')
+#MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
+#file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_omega.pdf'), overwrite = T)
+#file.remove('MCMCtrace.pdf')
+
+# Rhat summaries
+rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
+rhat_beta_0$term <- row.names(rhat_beta_0)
+rhat_beta_0$species <- sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])
+rhat_beta_0$var <- sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[1])
+rhat_beta_0$var <- gsub('B\\[', '', rhat_beta_0$var)
+rhat_beta_0$var <- gsub('cover_type', 'cover_type_', rhat_beta_0$var)
+rhat_beta_0 <- data.frame(param = rep('beta0', nrow(rhat_beta_0)), term = rhat_beta_0$term, species = rhat_beta_0$species, var = rhat_beta_0$var, rhat_beta_0[, -which(colnames(rhat_beta_0) %in% c('term', 'var', 'species'))], row.names = NULL)
+#rhat_beta_0 <- rhat_beta_0[order(rhat_beta_0$species, rhat_beta_0$var), ]
+#write.csv(rhat_beta_0, file.path(mod_dir, 'rhat_beta_0.csv'), row.names = F)
+
+rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.01), ]
+rhat_beta_1$term <- row.names(rhat_beta_1)
+rhat_beta_1$species <- sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])
+rhat_beta_1$var <- sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[1])
+rhat_beta_1$var <- gsub('B\\[', '', rhat_beta_1$var)
+rhat_beta_1$var <- gsub('cover_type', 'cover_type_', rhat_beta_1$var)
+rhat_beta_1 <- data.frame(param = rep('beta1', nrow(rhat_beta_1)), term = rhat_beta_1$term, species = rhat_beta_1$species, var = rhat_beta_1$var, rhat_beta_1[, -which(colnames(rhat_beta_1) %in% c('term', 'var', 'species'))], row.names = NULL)
+#rhat_beta_1 <- rhat_beta_1[order(rhat_beta_1$species, rhat_beta_1$var), ]
+#write.csv(rhat_beta_1, file.path(mod_dir, 'rhat_beta_1.csv'), row.names = F)
+
+rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.01), ]
+rhat_gamm_0$term <- row.names(rhat_gamm_0)
+rhat_gamm_0$species <- sapply(strsplit(row.names(rhat_gamm_0), ' '), \(xx) xx[3])
+rhat_gamm_0$var <- sapply(strsplit(row.names(rhat_gamm_0), ' '), \(xx) xx[1])
+rhat_gamm_0$var <- gsub('B\\[', '', rhat_gamm_0$var)
+rhat_gamm_0$var <- gsub('cover_type', 'cover_type_', rhat_gamm_0$var)
+rhat_gamm_0 <- data.frame(param = rep('gamm0', nrow(rhat_gamm_0)), term = rhat_gamm_0$term, species = rhat_gamm_0$species, var = rhat_gamm_0$var, rhat_gamm_0[, -which(colnames(rhat_gamm_0) %in% c('term', 'var', 'species'))], row.names = NULL)
+#rhat_gamm_0 <- rhat_gamm_0[order(rhat_gamm_0$species, rhat_gamm_0$var), ]
+#write.csv(rhat_gamm_0, file.path(mod_dir, 'rhat_gamm_0.csv'), row.names = F)
+
+rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.01), ]
+rhat_gamm_1$term <- row.names(rhat_gamm_1)
+rhat_gamm_1$species <- sapply(strsplit(row.names(rhat_gamm_1), ' '), \(xx) xx[3])
+rhat_gamm_1$var <- sapply(strsplit(row.names(rhat_gamm_1), ' '), \(xx) xx[1])
+rhat_gamm_1$var <- gsub('B\\[', '', rhat_gamm_1$var)
+rhat_gamm_1$var <- gsub('cover_type', 'cover_type_', rhat_gamm_1$var)
+rhat_gamm_1 <- data.frame(param = rep('gamm1', nrow(rhat_gamm_1)), term = rhat_gamm_1$term, species = rhat_gamm_1$species, var = rhat_gamm_1$var, rhat_gamm_1[, -which(colnames(rhat_gamm_1) %in% c('term', 'var', 'species'))], row.names = NULL)
+#rhat_gamm_1 <- rhat_gamm_1[order(rhat_gamm_1$species, rhat_gamm_1$var), ]
+#write.csv(rhat_gamm_1, file.path(mod_dir, 'rhat_gamm_1.csv'), row.names = F)
+
+rhat_df <- rbind(rhat_beta_0, rhat_beta_1, rhat_gamm_0, rhat_gamm_1)
+rhat_df <- rhat_df[order(rhat_df$param, rhat_df$species, rhat_df$var), ]
+write.csv(rhat_df, file.path(mod_dir, 'rhat_eval.csv'), row.names = F)
+
+rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.01), ]
+rhat_omeg_0$term <- row.names(rhat_omeg_0)
+rhat_omeg_0$species <- sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3])
+rhat_omeg_0$var <- sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[1])
+rhat_omeg_0$var <- gsub('Omega1\\[', '', rhat_omeg_0$var)
+rhat_omeg_0 <- data.frame(param = rep('omeg0', nrow(rhat_omeg_0)), term = rhat_omeg_0$term, species = rhat_omeg_0$species, var = rhat_omeg_0$var, rhat_omeg_0[, -which(colnames(rhat_omeg_0) %in% c('term', 'var', 'species'))], row.names = NULL)
+
+rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.01), ]
+rhat_omeg_1$term <- row.names(rhat_omeg_1)
+rhat_omeg_1$species <- sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[3])
+rhat_omeg_1$var <- sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[1])
+rhat_omeg_1$var <- gsub('Omega1\\[', '', rhat_omeg_1$var)
+rhat_omeg_1 <- data.frame(param = rep('omeg1', nrow(rhat_omeg_1)), term = rhat_omeg_1$term, species = rhat_omeg_1$species, var = rhat_omeg_1$var, rhat_omeg_1[, -which(colnames(rhat_omeg_1) %in% c('term', 'var', 'species'))], row.names = NULL)
+
+rhat_omeg <- rbind(rhat_omeg_0, rhat_omeg_1)
+rhat_omeg <- rhat_omeg[order(rhat_omeg$param, rhat_omeg$species, rhat_omeg$var), ]
+write.csv(rhat_omeg, file.path(mod_dir, 'rhat_omeg.csv'), row.names = F)
+
+# omega traces
+MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
-file.copy('MCMCtrace.pdf', file.path(fig_dir, 'trace_1_omega.pdf'), overwrite = T)
+file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-
