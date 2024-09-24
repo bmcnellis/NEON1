@@ -22,16 +22,18 @@ library(NEON1)
 library(dplyr)
 library(Hmsc)
 library(coda)
+library(ggplot2)
 library(bayesplot)
 library(MCMCvis)
 
 # model parameters
-s0 <- c(6000, 3000, 4, 4) # iterations, burn, chains, parallel
+s0 <- c(8000, 4000, 6, 6) # iterations, burn, chains, parallel
 s1 <- (s0[1] - s0[2]) * s0[3] # for ES
+# 10 dropped Hypochaeris_radicata, Hymenophyllum_recurvum, Axonopus_fissifolius' from 0, nothing from 1
 
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
-#dir0 <- '..'
-dir0 <- '/media/bem/data/NEON'
+dir0 <- '..'
+#dir0 <- '/media/bem/data/NEON'
 
 ### Directories
 data_dir <- dir0
@@ -52,8 +54,8 @@ stopifnot(
 ### Load data for models
 load(file.path(mod_dir, 'm_p_mod0.rda'))
 load(file.path(mod_dir, 'm_p_diag0.rda'))
-load(file.path(mod_dir, 'm_p_mod1.rda'))
-load(file.path(mod_dir, 'm_p_diag1.rda'))
+#load(file.path(mod_dir, 'm_p_mod1.rda'))
+#load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ### Evaluate
 
@@ -62,71 +64,38 @@ load(file.path(mod_dir, 'm_p_diag1.rda'))
 
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
-rhat_beta_0 <- mc_s_beta_0[which(mc_s_beta_0$Rhat > 1.01), ]
-rhat_beta_0
-table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3]))
-sum(table(sapply(strsplit(row.names(rhat_beta_0), ' '), \(xx) xx[3])))
-rhat_gamm_0 <- mc_s_gamm_0[which(mc_s_gamm_0$Rhat > 1.01), ]
-rhat_gamm_0
-# no bad rhat
-rhat_omeg_0 <- mc_s_omeg_0[which(mc_s_omeg_0$Rhat > 1.01), ]
-rhat_omeg_0
-# Adenophorus_tamariscinus, Coprosma_ernodeoides, Stenogyne_calaminthoides minor offendors
-# Trichomanes_bauerianum, Myrsine_lessertiana major offenders
-t0 <- table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[1]))
-names(t0) <- gsub('Omega1\\[', '', names(t0))
-t0 <- colSums(dplyr::bind_rows(t0, table(sapply(strsplit(row.names(rhat_omeg_0), ' '), \(xx) xx[3]))), na.rm = T)
-sum(t0)
+# load in new rhat table
+rhat <- read.csv(file.path(mod_dir, 'rhat_eval.csv'))
+nrow(rhat[which(rhat$param == 'beta0'), ])
+# 9 rows with bad Rhats for beta 0
+nrow(rhat[which(rhat$param == 'gamm0'), ])
+# no bad rhat for gamma 0
+#nrow(rhat[which(rhat$param == 'omeg0'), ])
+# 66 bad rows for omega 0 (but not present in rhat table for version 10)
 
-rhat_beta_1 <- mc_s_beta_1[which(mc_s_beta_1$Rhat > 1.05), ]
-rhat_beta_1
-table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3]))
-sum(table(sapply(strsplit(row.names(rhat_beta_1), ' '), \(xx) xx[3])))
-# 15 bad parameters, mostly cover_typeohia_woodland
-# Elaphoglossum_alatum, Freycinetia_arborea, Pneumatopteris_sandwicensis x2 each
-# Adenophorus_tamariscinus, Hymenophyllum_lanceolatum, Hymenophyllum_recurvum, Metrosideros_polymorpha,
-# Psidium_cattleianum, Psilotum_complanatum, Stenogyne_calaminthoides, Trichomanes_bauerianum x1
-# but all Rhats are = 1.02 and n.eff is relatively large
-rhat_gamm_1 <- mc_s_gamm_1[which(mc_s_gamm_1$Rhat > 1.01), ]
-rhat_gamm_1
-# no bad parameters
-rhat_omeg_1 <- mc_s_omeg_1[which(mc_s_omeg_1$Rhat > 1.01), ]
-rhat_omeg_1
-t1 <- table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[1]))
-names(t1) <- gsub('Omega1\\[', '', names(t1))
-t1 <- colSums(dplyr::bind_rows(t1, table(sapply(strsplit(row.names(rhat_omeg_1), ' '), \(xx) xx[3]))), na.rm = T)
-sum(t1)
-# 13 bad params
-# Microlaena_stipoides is only potential issue, although some Rhats are large
-
-## ESS
-# mc_s_beta_1, mc_s_beta_0, mc_s_gamma_1, etc.
-# uses **n.eff
+# not worried about model 1 for now
 
 ## pp_check using bayesplot::
-NEON1::pp_check(m_p = m_p, mp_pp = mp_pp, 2000)
+NEON1::pp_check(m_p = m_p_0, mp_pp = mp_pp_0, 2000)
+# PP check looks good
 
-## RMSE/R2
-hist(mf_p$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mf_p$RMSE), 2)), breaks = 30)
-# RMSE for probit, R2 for others
+# model fit diagnostics
+# bind them all together with species names
+mfs <- data.frame(spp = colnames(m_p_0$Y), RMSE = mf_p_0$RMSE, AUC = mf_p_0$AUC, TjurR2 = mf_p_0$TjurR2)
+hist(mfs$RMSE, xlim = c(0,1), main = paste0("Mean = ", round(mean(mfs$RMSE), 2)), breaks = 30)
+round(range(mfs$RMSE), 2)
+# mean RMSE 0.24, range [0.08, 0.37], for 31 total species
+# combine with species to show which are divergent
+ggplot(mfs, aes(x = spp, y = RMSE)) +
+  geom_bar(stat = 'identity') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# > 0.3 for Alyxia_stellata, Myrsine_lessertiana, Styphelia_tameiameiae, Uncinia_uncinata, Vaccinium_calycinum
 
-### Generating data/eval for figures
 
-## Variance partitioning
-
-# figure: variance partitioning
-NEON1::plot_vp(m_p, m_vp)
 # how much do traits explain environment-species relationships?
-knitr::kable(round(m_vp$R2T$Beta * 100, 2))
-round(m_vp$R2T$Y * 100, 2)
-# not much, 0.47%
+mve <- as.data.frame(m_vp_0$R2T)
+mve <- data.frame(var = row.names(mve), mve, row.names = NULL)
+# 22.02 % mean variance explained
+# high of 41.45 for cowTRUE, with age_median at 11.30 and pai at 26.43
 
-## Parameter means and highest posterior density intervals (HPD)
-# only plot elevation, pai, age_median because those are standardized
-post_beta <- post_beta_0[which(post_beta$var %in% c('elevation', 'pai', 'age_median')), ]
-post_beta$var <- ifelse(post_beta$var == 'age_median', 'Flow age', post_beta$var)
-post_beta$var <- ifelse(post_beta$var == 'elevation', 'Elevation', post_beta$var)
-post_beta$var <- ifelse(post_beta$var == 'pai', 'Plant area index', post_beta$var)
-post_beta$spp <- gsub('_', ' ', post_beta$spp)
-
-NEON1::param_plot(post_beta, 'Parameter effect (Beta)')
+# check the HMSC book for other model fit diagnostics
