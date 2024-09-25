@@ -9,8 +9,10 @@ library(NEON1)
 
 # also creates data object for flow age
 
-shp_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/spatial/NEON_Shapefiles'
-fig_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures'
+#shp_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/spatial/NEON_Shapefiles'
+shp_dir <- '../spatial/NEON_shapefiles'
+#fig_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/figures'
+fig_dir <- '../results/figures'
 
 # fix roads shapefile
 #roads <- vect(file.path(shp_dir, 'PUUM_Roads', 'PUUM_roads_edited.shp'))
@@ -26,6 +28,7 @@ flow <- flow[-which(flow$age_range == 'A.D. 1984'), ]
 outline <- st_read(file.path(shp_dir, 'PUUM_Outline', 'PUUM_OUTLINE.shp'))
 outline <- st_transform(outline, crs(flow))
 outline <- outline[1, ]
+#st_write(outline[1], file.path(shp_dir, 'PUUM_outline_fixed.shp'))
 roads <- st_read(file.path(shp_dir, 'PUUM_Roads', 'PUUM_roads_fixed.shp'))
 roads <- st_transform(roads, crs(flow))
 roads <- st_crop(roads, outline)
@@ -55,7 +58,7 @@ flow_meta$age_median <- ifelse(flow_meta$age_range == '1,500-3,000 yr', 2250, fl
 flow_meta$age_median <- ifelse(flow_meta$age_range == '200-750 yr', 475, flow_meta$age_median)
 flow_meta$age_median <- ifelse(flow_meta$age_range == '3,000-5,000 yr', 4000, flow_meta$age_median)
 flow_meta$age_median <- ifelse(flow_meta$age_range == '5,000-11,000 yr', 8000, flow_meta$age_median)
-usethis::use_data(flow_meta, overwrite = T)
+#usethis::use_data(flow_meta, overwrite = T)
 
 tower <- st_read(file.path(shp_dir, 'PUUM_Tower', 'Tower.shp'))
 tower <- st_transform(tower, crs(flow))
@@ -78,6 +81,17 @@ KCF <- st_read(file.path(shp_dir, 'KCF_Prison_Outline', 'KCF_Outline.shp'))
 KCF <- st_transform(KCF, crs(flow))
 KCF <- st_crop(KCF, flow)
 
+plots <- plots[which(plots$Name_2 %in% NEON1::incl_plots), ]
+lus <- NEON1::lus
+colnames(lus)[1] <- 'Name_2'
+plots <- dplyr::left_join(plots, lus, by = 'Name_2')
+plots_cow <- plots[plots$cow, ]
+plots_log <- plots[plots$log, ]
+#file.remove(file.path(shp_dir, 'NEON_plots_reduced.shp'))
+#st_write(plots, file.path(shp_dir, 'NEON_plots_reduced.shp'))
+#st_write(plots_cow, file.path(shp_dir, 'NEON_plots_cow.shp'))
+#st_write(plots_log, file.path(shp_dir, 'NEON_plots_log.shp'))
+
 ggplot() +
   # Add flow layer - fill aesthetic
   geom_sf(data = flow, aes(fill = relevel_age(age_range)), show.legend = 'polygon') +
@@ -91,7 +105,7 @@ ggplot() +
   geom_sf(data = plots, aes(color = 'plots'), fill = 'white', size = 3.2, shape = 21, alpha = 0.8) +
   geom_sf(data = tower, aes(color = 'tower'), fill = 'yellow', shape = 23, size = 3.8) +
   # add scale bar
-  ggsn::scalebar(data = flow, location = 'bottomleft', anchor = c(x = -155.225, y = 19.485), dist = 1, dist_unit = 'km', st.size = 3, st.bottom = F, st.color = 'white', height = 0.025, transform = T, model = 'WGS84') +
+  #ggsn::scalebar(data = flow, location = 'bottomleft', anchor = c(x = -155.225, y = 19.485), dist = 1, dist_unit = 'km', st.size = 3, st.bottom = F, st.color = 'white', height = 0.025, transform = T, model = 'WGS84') +
   #ggsn::north(data = flow, location = 'topright', symbol = 16) +
 
   scale_fill_viridis(option = "A", discrete = T, direction = -1) +
@@ -113,3 +127,5 @@ ggplot() +
 
 ggsave(file.path(fig_dir, 'map_figure.pdf'), width = 11, height = 8.5, units = 'in')
 ggsave(file.path(fig_dir, 'map_figure.png'), width = 11, height = 8.5, units = 'in')
+
+

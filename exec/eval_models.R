@@ -62,6 +62,12 @@ load(file.path(mod_dir, 'm_p_diag0.rda'))
 ## Trace plots
 # trace plot figures are in fig_dir
 
+# included_plots object
+incl_plots <- row.names(m_p_0$Y)
+incl_plots <- unique(sapply(strsplit(incl_plots, '_'), \(xx) xx[1]))
+incl_plots <- paste0('PUUM_', incl_plots)
+usethis::use_data(incl_plots, overwrite = T)
+
 ## Rhat
 # Gill (2007) states failure to converge for one parameter is failure to converge for all parameters
 # load in new rhat table
@@ -97,5 +103,6 @@ mve <- as.data.frame(m_vp_0$R2T)
 mve <- data.frame(var = row.names(mve), mve, row.names = NULL)
 # 22.02 % mean variance explained
 # high of 41.45 for cowTRUE, with age_median at 11.30 and pai at 26.43
+usethis::use_data(mve, overwrite = T)
 
 # check the HMSC book for other model fit diagnostics
