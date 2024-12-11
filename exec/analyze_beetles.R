@@ -30,7 +30,7 @@ library(neonUtilities)
 library(dplyr)
 
 # Pull relevant data frames from downloaded NEON data
-bl <- neonUtilities::loadByProduct('DP1.10022.001', 'PUUM', include.provisional = F)
+bl <- neonUtilities::loadByProduct('DP1.10022.001', 'PUUM', include.provisional = T)
 Y
 bl_f <- bl$bet_fielddata
 bl_f <- bl_f[which(bl_f$sampleCollected == 'Y'), ]
