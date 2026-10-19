@@ -17,18 +17,22 @@
 #         Peperomia, Rhynchospora, and Carex are the big offenders here.
 
 library(NEON1)
-library(neonUtilities)
 #library(neonOS)
 library(dplyr)
 
 # Note: flow data is imported in make_map_figure.R
 
 ### Load data products
-d0 <- neonUtilities::loadByProduct('DP1.10058.001', 'PUUM', include.provisional = T, check.size = F)
-d1 <- neonUtilities::loadByProduct('DP1.10098.001', 'PUUM', include.provisional = T, check.size = F)
-d2 <- neonUtilities::loadByProduct('DP1.10047.001', 'PUUM', include.provisional = T, check.size = F)
-d3 <- neonUtilities::loadByProduct('DP1.10086.001', 'PUUM', include.provisional = T, check.size = F)
-d4 <- neonUtilities::loadByProduct('DP1.10026.001', 'PUUM', include.provisional = T, check.size = F)
+# Downloaded and cached by exec/import_NEON.R - NEON requires an API token as of
+# June 2026, so the download is kept out of this script. Re-run import_NEON.R to
+# refresh; see data_NEON/download_log.txt for what is currently cached.
+neon_dir <- '../data_NEON' # relative to the package root
+neon_fls <- file.path(neon_dir, paste0('d', 0:4, '.rda'))
+if (!all(file.exists(neon_fls))) {
+  stop('cached NEON products not found in ', neon_dir, ' - run exec/import_NEON.R first')
+}
+for (ii in neon_fls) load(ii)
+stopifnot(all(sapply(paste0('d', 0:4), exists)))
 
 ### Meta-data
 

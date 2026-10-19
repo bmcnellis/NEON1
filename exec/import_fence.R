@@ -5,12 +5,12 @@ library(NEON1)
 library(terra)
 library(viridis)
 
-res_dir <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/results/reports'
+res_dir <- '../results/reports'
 
 data('met')
 
 td <- tempdir()
-shp_zip <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1/data/PuuMakaala_Fence_Units_20240517.zip'
+shp_zip <- '../data/PuuMakaala_Fence_Units_20240517.zip'
 unzip(shp_zip, exdir = td)
 fence_fl <- file.path(td, 'PuuMakaala_Fence_Units_20240517.shp')
 
@@ -25,7 +25,9 @@ met_fence$EstComp <- grepl('estimate|estimation', met_fence$Comments)
 met_fence$Ingress <- c('2023', rep(NA, nrow(met_fence) - 1))
 met_fence <- met_fence[, -which(names(met_fence) %in% c('Reserve', 'Program', 'Comments', 'DateUngFre', 'EditDate', 'Editor', 'CreationDa', 'GlobalID', 'Creator', 'Display', 'Shape__Are', 'Shape__Len'))]
 met_fence$Acres <- round(met_fence$Acres * 0.404686, 2)
-met_fence$DateComp <- as.numeric(strptime(met_fence$DateComp, '%Y/%m/%d')$year + 1900)
+# terra >= 1.8 returns shapefile date fields already parsed as POSIXct, so the
+# strptime(.., '%Y/%m/%d') that worked under terra 1.7 now returns all NA
+met_fence$DateComp <- as.integer(format(as.POSIXct(met_fence$DateComp, tz = 'UTC'), '%Y'))
 names(met_fence) <- c('enclosure_name', 'enclosure_ha', 'enclosure_completed', 'enclosure_ung_free', 'enclosure_maint_days', 'enclosure_completed_estimate', 'enclosure_ingress')
 
 # get plots

@@ -9,7 +9,7 @@ library(Hmsc)
 # model parameters
 s0 <- c(11000, 4000, 8, 8) # iterations, burn, chains, parallel
 
-dir0 <- '/media/bem/data/NEON'
+dir0 <- '..' # run with the working directory set to the package root
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories

@@ -5,3 +5,6 @@
 r-python/
 inst/process_hemisphere/__pycache__/
 MCMCtrace.pdf
+# API tokens - never commit
+exec/NEON_TOKEN.R
+*_TOKEN.R

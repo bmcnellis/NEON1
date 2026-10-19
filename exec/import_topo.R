@@ -29,7 +29,7 @@ chan_FUN <- saga$ta_channels$channel_network
 # = FAT_FUN
 
 #e1_dir <- '../spatial/AOP'
-e1_dir <- '/media/bem/data/NEON/spatial/AOP'
+e1_dir <- '../spatial/AOP'
 # DP3.30024.001 is 3.36 GB downloaded 2024-08-08 12:31 PM HST
 #e1 <- neonUtilities::byFileAOP('DP3.30024.001', 'PUUM', 2020, T, F, e1_dir)
 aop_dir <- 'DP3.30024.001/neon-aop-products/2020/FullSite/D20/2020_PUUM_2/L3/DiscreteLidar/DTMGtif'

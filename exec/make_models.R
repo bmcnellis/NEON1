@@ -31,7 +31,7 @@ library(MCMCvis)
 s0 <- c(8000, 4000, 6, 6)
 # add more when final model is figured out
 
-dir0 <- '/media/bem/data/NEON'
+dir0 <- '..' # run with the working directory set to the package root
 #dir0 <- 'C:/Users/BrandonMcNellis/OneDrive - USDA/NEON1'
 
 ### Directories
@@ -415,20 +415,20 @@ save(list = c(
 )
 
 # Trace plots
-MCMCvis::MCMCtrace(mc_p_0$Beta)
+MCMCvis::MCMCtrace(mc_p_0$Beta, open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-MCMCvis::MCMCtrace(mc_p_0$Gamma)
+MCMCvis::MCMCtrace(mc_p_0$Gamma, open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 #MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
 #file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_omega.pdf'), overwrite = T)
 #file.remove('MCMCtrace.pdf')
 
-MCMCvis::MCMCtrace(mc_p_1$Beta)
+MCMCvis::MCMCtrace(mc_p_1$Beta, open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_beta.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-MCMCvis::MCMCtrace(mc_p_1$Gamma)
+MCMCvis::MCMCtrace(mc_p_1$Gamma, open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_gamma.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
 #MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
@@ -499,9 +499,9 @@ rhat_omeg <- rhat_omeg[order(rhat_omeg$param, rhat_omeg$species, rhat_omeg$var),
 write.csv(rhat_omeg, file.path(mod_dir, 'rhat_omeg.csv'), row.names = F)
 
 # omega traces
-MCMCvis::MCMCtrace(mc_p_0$Omega[[1]])
+MCMCvis::MCMCtrace(mc_p_0$Omega[[1]], open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_0_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
-MCMCvis::MCMCtrace(mc_p_1$Omega[[1]])
+MCMCvis::MCMCtrace(mc_p_1$Omega[[1]], open_pdf = F)
 file.copy('MCMCtrace.pdf', file.path(mod_dir, 'trace_1_omega.pdf'), overwrite = T)
 file.remove('MCMCtrace.pdf')
