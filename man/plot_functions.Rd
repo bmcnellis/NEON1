@@ -28,7 +28,7 @@ plot_vp(hM, VP)
 
 ess_plot(es_df, var, ylab)
 
-param_plot(post, ylab)
+param_plot(post, ylab, err_width = 0.63)
 
 plot_resid(m_p, mp_p)
 

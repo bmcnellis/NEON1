@@ -63,3 +63,31 @@ Stainback); three plots fall outside any enclosure.
   Hawai'i*, Kumu Pono Associates LLC, 31 May 2004. Copy in `references/`.
 - Lava flow ages are **Sherrod et al. (2021)**, USGS SIM 3143, already in
   `MS2/references.docx`.
+
+## Added 2026-11-08 (v0_6 review)
+
+- **"34 eruptions since 1843" is not in DLNR (2013).** It is USGS HVO
+  (usgs.gov/volcanoes/mauna-loa), cited in v0_6 as USGS (2026). DLNR p. 8 says
+  flows in the reserve range from 1942 to *older than* 10,000 yr (not
+  "approximately 10,000").
+- **Ten high-priority invasive weeds** are listed on DLNR pp. 32-33 (strawberry
+  guava, banana poka, *Rubus ellipticus*, cane tibouchina, kahili ginger, palm
+  grass, Australian tree fern, Clidemia, tropical ash, silver-leaf
+  cotoneaster). Miconia and night-blooming jasmine are on adjoining lands, not
+  yet detected in the reserve.
+- **Pig mechanism**: DLNR p. 32 - rooting and wallowing facilitate weed
+  establishment. Cited with Aplet et al. 1991 and Nogueira-Filho et al. 2009.
+- **Post-2013 fence dates** (Stainback 2014, Upper Olaa 2016, Army Road 2019)
+  rest only on the 2024 fence layer, cited as DLNR (2024), unpublished. Open
+  issue: a citable source.
+- Only Kata-Stein (no date, set to 2014) contains plots; Unencumbered Kulani
+  Pasture (also undated) contains none. Plot enclosures closed on four distinct
+  dates (1995, 1997, 2002, 2014).
+- 6 of the 7 grazed plots are ohia woodland; grazed plots have mean PAI 2.0 vs
+  3.5 ungrazed.
+- NEON codes *Dodonaea viscosa* as introduced (`I`); it is generally treated as
+  indigenous. It is in the 10-m2 model and positive for grazing (2.53). Open
+  issue.
+- Paths in this file written before 2026-11-08 refer to `MS2/`; the manuscript
+  folder is now `ms/` under `/media/bem/data/NEON1`.
+

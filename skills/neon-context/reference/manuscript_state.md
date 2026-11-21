@@ -1,97 +1,95 @@
-# MS2 v0_5: section-by-section state
+# Manuscript state: v0_6 (2026-11-08)
 
-Read this before editing `MS2/NEON1_MS2_0_5.docx`, before renumbering or
-regenerating a figure, or before adding a citation. Written 2026-10-19 against
-the file as saved.
+Read this before editing `ms/NEON1_0_6.docx`, before renumbering or
+regenerating a figure, or before adding a citation. Paths are under
+`/media/bem/data/NEON1`.
 
-## Build
+## Files and versioning
 
-v0_5 was generated with `python-docx` from `MS2/NEON1_MS2_0_4.docx`, which
-supplied the styles: Times New Roman 12 pt, level-1 headings bold, level-2
-headings italic, `Table Grid` tables. Every Results number was read from
-`m_p_diag0.rda` / `m_p_diag1.rda`; none was carried over from v0_4 text.
+- `ms/NEON1_0_6.docx` - live draft, written 2026-11-08 from BEM's review copy.
+- `ms/NEON1_0_5_BEM.docx` - BEM's tracked edits + 33 comments on 0_5 (the
+  review copy; never edit). `ms/NEON1_0_5.docx` - the 0_5 as generated. BEM
+  files older versions into `ms/previous_versions/` himself; leave them.
+- Naming: `NEON1_<major>_<minor>.docx` (the `MS2_` infix was dropped with the
+  directory change); BEM's review copy adds `_BEM`.
+- `ms/references.docx` is retired: it was moved to
+  `ms/previous_versions/references_08112026_0032.docx` (BEM's instruction). The
+  Literature Cited now lives inside the manuscript (58 entries, Springer
+  author-year style, DOIs from Crossref).
 
-## Word counts
+## How 0_6 was built (repeat this for 0_7)
 
-| Section | Paragraphs | Words |
-|---|---|---|
-| Introduction | 7 prose + 4 numbered items | ~1,140 |
-| Methods | 7 subsections | ~1,700 |
-| Results | 8 | ~915 |
-| Discussion | 9 | ~1,630 |
+Direct OOXML with lxml from the `_BEM` copy (not python-docx regeneration):
+accept all tracked changes (drop `w:del`, unwrap `w:ins`, remove `w:ins`/`w:del`
+markers in `w:pPr/w:rPr`; a `w:del` in a paragraph-mark rPr means BEM merged
+that paragraph with the next one - honour it), strip addressed comments, then
+replace paragraph content from a mini-markup (`*italic*`, `**bold**`,
+`^{sup}`, `_{sub}`, leading `\t`). Body paragraphs begin with a tab and are
+separated by blank paragraphs (BEM's 0_5 edits). BEM's settings keep
+`trackRevisions` on. LibreOffice crashes in the sandbox, so verify by
+re-parsing the XML (python-docx loads it) and dumping text with run markup.
+Figures are swapped by overwriting `word/media/image1-7.png` (1 map, 2
+disturbance, 3 vp_plot, 4 env, 5 disturb, 6 cover, 7 ve_invasive; PDFs
+rendered with `pdftoppm -r 200`).
 
-Body ~5,400 of the 8,500-word *Landscape Ecology* allowance. The Introduction
-runs over the 800-word target BEM set in v0_4; the question-and-hypothesis list
-accounts for ~200 words of the overage and the Hawaiian-forest paragraph for
-~120. Cutting is BEM's editorial call.
+## Structure of 0_6
 
-## Structure as drafted
+- **Notes for co-authors** sit at the top, above the Abstract, as a numbered
+  list (BEM's instruction): changes in 0_6, answers to his comments, and
+  open issues. Rewrite them each version; do not carry stale notes.
+- Introduction paragraphs 1-2 are BEM's 0_4 **outline text, verbatim**, each
+  followed by a bold bracket of five suggested references (all in Literature
+  Cited). Do not re-draft them into prose unless asked.
+- The four numbered questions carry no citations, and each ends with a bold
+  sentence naming the model output and figures/tables that answer it.
+- The rooting-and-grazing mechanism lives in the pig paragraph (moved out of
+  Question 1).
+- 'Species traits' is no longer a subsection; the trait text is appended to
+  the disturbance paragraph of Explanatory variables (BEM: "combine with the
+  above paragraph").
+- Results headings: 'Model performance and evaluation', 'Factors affecting
+  plant occurrence and abundance across PUUM', 'Scale effects in model
+  results' (BEM's).
+- Every DLNR (2013) citation carries a page number (BEM's rule).
+- Data-handling/plotting packages are cited in `NEON1/DESCRIPTION`, not the
+  text (BEM's rule); only Hmsc, coda, MCMCvis, bayesplot and neonUtilities are
+  cited in Software.
+- Table 1 has no 'Used' column; unused data rows say 'Obtained, not modelled'.
 
-- **Introduction** ends on four numbered items, each a question then a
-  hypothesis then a mechanism, per `manuscript-prose-voice`. Three are
-  hypotheses; item 4 is an expectation. **No citations inside the numbered
-  list** - this is deliberate, requested on 2026-10-19. Peyton et al. (2023)
-  sits in the pigs paragraph and Medeiros et al. (2019) in the
-  Hawaiian-forest-properties paragraph instead.
-- **Methods** run in order of operations: study system, plant community data,
-  explanatory variables, species traits, joint species distribution model,
-  model evaluation, software and reproducibility.
-- **Results** open with the model-evaluation paragraph, then variance
-  partitioning, environment, disturbance, cover type, traits, residual
-  associations, and the 10-m2 model.
-- **Discussion** has one paragraph answering each Introduction paragraph, with
-  the caveats last, pointed back at the paragraph that justified the NEON data.
-
-## Equations
-
-Three numbered equations, (1) to (3), with italic variables and real Word
-subscripts, indented with the number on a right tab stop at 6.5 in. Written in
-Hmsc notation: a summation over covariates rather than seven spelled-out beta
-terms, and the trait model at vector level, `beta_j ~ Normal(Gamma t_j, V)`.
-The v0_4 specification (generic probit, `Normal(0,10)` / `HalfCauchy(10)`
-priors, `alpha_date` varying intercept) did not match the fitted code and is
-gone.
-
-## Figures and tables
-
-Figures are embedded inline above their captions at 6.5 in wide.
+## Figures
 
 | Fig | File | Script |
 |---|---|---|
 | 1 | `results/figures/map_figure.png` | `make_map_figures.R` |
-| 2 | `results/figures/disturbance_figure.png` | `make_map_figures.R` |
-| 3 | `results/figures/vp_plot.pdf` | `make_figures.R` |
-| 4 | `results/figures/param_plot_env.pdf` | `make_figures.R` |
-| 5 | `results/figures/param_plot_disturb.pdf` | `make_figures.R` |
-| 6 | `results/figures/param_plot_cover.pdf` | `make_figures.R` |
-| 7 | `results/figures/ve_invasive.pdf` | `make_figures.R` |
-| S1 | not produced | `analyze_climate.R`, cannot be run |
+| 2 | `results/figures/disturbance_figure.png` | `make_map_figures.R` (2026 reference year) |
+| 3 | `vp_plot.pdf` | `make_figures.R` |
+| 4-6 | `param_plot_env/disturb/cover.pdf` | `make_figures.R`; whiskers `err_width = 0.63` |
+| 7 | `ve_invasive.pdf` | `make_figures.R`; 90% HPD from `NEON1::r2t_draws()` |
+| S1 | not produced | `analyze_climate.R` - cannot run (see open issues) |
 
-**The comments in `make_figures.R` still number these 4-8 and are offset by
-one.** Fix them when that script is next touched.
+Figure 6 drops cover-type terms for species never recorded in that cover type
+(39 of 65 credible terms, all negative) and uses `facet_grid(space =
+'free_x')` with short labels (Koa, Ohia-ash, Ohia-koa, Ohia woodland). Figure
+comments in `make_figures.R` now match the manuscript numbering.
 
-- **Table 1** data sources, rewritten with a `Used` column, since v0_4 listed
-  soil chemistry as a fixed effect when it is imported but absent from
-  `XFormula`.
-- **Table 2** fit and convergence of both models side by side.
+## Open issues carried in the 0_6 notes
 
-## Citations added in v0_5 and not yet in `MS2/references.docx`
+[PAI guy] author (HemiPy, Brown et al. 2023: Luke A. Brown or Courtney Meier?);
+Meier et al. (2023) unidentified; Schimel et al. (2015) matched to Schimel and
+Keller (2015) - confirm; a citable source for post-2013 fence dates (DLNR 2024
+is the unpublished layer); Figure S1; no plot-level random effect; *Dodonaea
+viscosa* coded introduced; grazing end dates per plot; acknowledgement for the
+NEON land-use table; Abstract; 'WREF, JORN, REFS' placeholder; cross-validation;
+10-m2 model figures; Introduction over 800 words. The convergence standard
+(PSRF < 1.1, counts > 1.01 reported) was stated by Claude and awaits BEM's
+confirmation.
 
-Ovaskainen et al. (2017), Ovaskainen and Abrego (2020), Tikhonov et al. (2020,
-and 2025 for the package), Konig et al. (2021), Gelman and Rubin (1992), Brooks
-and Gelman (1998), Tjur (2009), Youngflesh (2018), Chadwick et al. (1999),
-Vitousek (2004), Maly and Maly (2004), plus the package citations in the
-software section (Plummer et al. 2006, Gabry and Mahr 2025, Gabry et al. 2019,
-Lunch et al. 2026, Wickham et al. 2026 and 2025, Wickham 2016, Garnier et al.
-2024, Pebesma 2018, Pebesma and Bivand 2023, Hijmans et al. 2026, R Core Team
-2026). Sherrod et al. (2021) and Medeiros et al. (2019) were already there.
+## Reports written for BEM's comments
 
-## Still open in v0_5
-
-- **Abstract** is a heading with a flag. Write it last, against the final
-  Results.
-- **Figure S1** has a caption and no figure.
-- `REF` / `REFS` placeholders remain in Introduction paragraphs 1, 2 and 3.
-- The author list still carries `[PAI guy]`.
-- `MS2/NEON1_MS2_0_4.docx` is still at the MS2 top level and has not been
-  moved to `previous_versions/`; that is BEM's filing convention to apply.
+- `results/reports/foliar_traits/` - `foliar_traits.md`, `.R`, CSVs, PNG.
+  DP1.10026.001 at PUUM: 49 samples (2019, 2025), 23 *M. polymorpha*; 10 of
+  35 1-m2 species sampled, none introduced. Hmsc traits are per species, so
+  plot-date linkage was never the obstacle.
+- `results/reports/konig_2021/konig_2021.md` - what König et al. did and how
+  NEON1 departs (no plot/year random effect; grains not nested; no
+  out-of-sample test; 90% vs 95%).

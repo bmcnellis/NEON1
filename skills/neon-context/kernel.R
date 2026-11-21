@@ -1,4 +1,4 @@
-NEON_DATA_ROOT <- "/media/bem/data/NEON_claude"
+NEON_DATA_ROOT <- "/media/bem/data/NEON1"
 
 neon_path <- function(..., root = NULL) {
   if (is.null(root)) root <- NEON_DATA_ROOT

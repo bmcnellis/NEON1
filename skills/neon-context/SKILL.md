@@ -1,6 +1,6 @@
 ---
 name: neon-context
-description: "Project-specific -- NEON PUUM only; do not apply to other projects unless explicitly asked. Project context for the PUUM (Pu'u Maka'ala, Hawai'i) NEON plant community analysis: data root layout, the NEON1 R package and how to run it, the NEON API token and the cached data_NEON downloads, the two Hmsc joint species distribution models refit on 2026-10-19 and how the refreshed data changed the trait-interaction result, manuscript state (MS2), and the package-drift traps that fail silently. Load before touching this project's data, models, figures, or manuscript text."
+description: "Project-specific -- NEON PUUM only; do not apply to other projects unless explicitly asked. Project context for the PUUM (Pu'u Maka'ala, Hawai'i) NEON plant community analysis: data root layout, the NEON1 R package and how to run it, the NEON API token and the cached data_NEON downloads, the two Hmsc joint species distribution models (refit 2026-11-08 with a 2026 reference year) and how refits changed the results, manuscript state (ms/NEON1_0_6.docx and BEM's review rules), and the package-drift traps that fail silently. Load before touching this project's data, models, figures, or manuscript text."
 scope: project-specific
 project: NEON PUUM
 ---
@@ -14,9 +14,10 @@ project: NEON PUUM
 Working context for Brandon McNellis's analysis of NEON plant community data at
 **PUUM** (Pu'u Maka'ala Natural Area Reserve, Hawai'i Island; NEON domain D20,
 the only site in the Pacific Tropical Domain). Everything below was read off the
-files on disk as of **2026-10-19**; the manuscript is `MS2` v0_5 (2026-10-19) and
-the fitted models are from **2026-10-19**, fitted to NEON data current to
-2025-06-24. The 2024-09-21/22 fits no longer exist on disk — see §7.
+files on disk as of **2026-11-08**; the manuscript is `ms/NEON1_0_6.docx`
+(2026-11-08) and the fitted models are from **2026-11-08**, fitted to NEON data
+current to 2025-06-24 with years ungulate-free referenced to 2026. The
+2026-10-19 fit is archived (see §6-7).
 
 ## 1. The scientific question
 
@@ -45,34 +46,40 @@ the reserve boundary. Cattle grazed some tracts until 2005; pigs excluded
 
 ## 2. Where things live
 
-Data root (granted host path, rw): **`/media/bem/data/NEON_claude`**
+Data root (granted host path, rw): **`/media/bem/data/NEON1`**. BEM renamed
+and reorganised it from `/media/bem/data/NEON_claude` on 2026-11-07; any path
+in an older note that starts `NEON_claude/` or uses `MS1/`, `MS2/` is stale.
 
 | Path | What |
 |---|---|
 | `NEON1/` | the analysis R package + git repo (branch `main`) |
-| `NEON1/R/` | package functions: `helpers.R`, `plot_functions.R`, `keys.R`, `external.R` |
-| `NEON1/exec/` | 16 analysis scripts (the actual pipeline) |
-| `NEON1/data/` | 15 `.rda` package data objects |
+| `NEON1/R/` | package functions: `helpers.R`, `plot_functions.R`, `keys.R`, `external.R` (`data.R` empty) |
+| `NEON1/exec/` | the analysis scripts (the pipeline) + `NEON_TOKEN.R` (git-ignored) |
+| `NEON1/data/` | 16 `.rda` package data objects |
+| `NEON1/skills/neon-context/` | copy of this skill, kept in sync by hand |
 | `data_NEON/` | cached raw NEON downloads: `d0`-`d4.rda` plus `download_log.txt`, written by `import_NEON.R` |
+| `.data_2024_snapshot/` | the 2024 package data objects, kept for comparison (hidden) |
 | `rlib/` | R library for the CRAN-only packages (MCMCvis, neonUtilities, Rsagacmd) and the installed `NEON1`. Keep it; rebuilding costs ~20 min |
-| `data/`, `meta/` | field data (DHP csv, log/graze xlsx, fence unit zips) and NEON site metadata |
-| `results/model_results/` | fitted Hmsc models + diagnostics + trace PDFs |
+| `data/` | field data: DHP csv, `puum plots log_graze.xlsx` (NEON D20 land-use table), fence unit zips, `references.txt` (NEON product citations) |
+| `meta/` | NEON site metadata and soil reports |
+| `ms/` | the manuscript: `NEON1_0_6.docx` (live), `NEON1_0_5_BEM.docx` (BEM's review of 0_5), `NEON1_0_5.docx`, `previous_versions/` (all MS and MS2 drafts, and the retired `references_08112026_0032.docx`) |
+| `references/` | literature: König 2021 + Dryad zip, gllvm/niku, the DLNR management plan, Maly and Maly (2004), Mecyclothorax site descriptions, substrate map, D20 publication list |
+| `results/model_results/` | fitted Hmsc models + diagnostics + traces; `model_results_archive/fit_20261019/` holds the previous fit; `r2t_trait_hpd0.csv` (Figure 7 intervals) |
 | `results/figures/` | current manuscript figures (9 files) + `archive/` |
-| `results/reports/` | DHARMa residual-check PDFs, fencing csv/zip |
-| `spatial/` | AOP elevation mosaics, `AOP/DP3.30024.001/` LiDAR DSM+DTM tiles (416 each, 1-km UTM 5N grid), `NEON_Shapefiles/`, `fencelines_modified/` |
-| `provided/` | NEON-supplied docs and shapefiles (raw copies of `spatial/NEON_Shapefiles`); `NEON Docs/PlotCharacterization/Docs/` holds the DLNR management plan and cultural study |
-| `references/` | literature: Konig 2021 + Dryad zip, gllvm/niku, the DLNR management plan, Maly and Maly (2004) cultural study, Mecyclothorax site descriptions, substrate map |
-| `NEON1/skills/` | copy of this skill, kept in sync by hand |
-| `<skills>/neon-context/references/` | Konig et al. 2021 *J. Biogeogr.* JSDM scale-dependency paper + its Dryad appendix (doi:10.5061/dryad.qfttdz0g7) - the methodological template |
-| `MS1/`, `MS2/` | manuscript drafts with `previous_versions/` |
+| `results/reports/` | DHARMa PDFs; `foliar_traits/` and `konig_2021/` reports (2026-11-08) |
+| `results/archive/` | old deliverables (`PUUM_summary_for_LS.zip`) |
+| `spatial/` | AOP elevation mosaics, `AOP/DP3.30024.001/` LiDAR tiles, `NEON_Shapefiles/`, `fencelines_modified/` |
+| `provided/` | NEON-supplied docs and shapefiles |
+| `claude/`, `.claude/` | empty, created by BEM 2026-11-07; nothing written there yet |
 
-`MS1` is a separate, earlier manuscript (NEON cross-site/citation framing, its
-own `data/`); **`MS2/NEON1_MS2_0_4.docx` is the live project manuscript.**
+The 2023 `MS1` manuscript and its separate `data/` are gone from the tree; its
+drafts survive in `ms/previous_versions/` (`NEON1_MS_0_0_*`).
 
 ## 3. The NEON1 package
 
 `Package: NEON1`, v0.2.0, R >= 4.1.2. Imports dplyr, tidyr, ggplot2, viridis,
-terra, Rsagacmd, neonUtilities, Hmsc, coda, corrplot. Scripts also use
+terra, sf (added 2026-11-08; DESCRIPTION is where BEM wants data-handling
+packages cited, not the manuscript), Rsagacmd, neonUtilities, Hmsc, coda, corrplot. Scripts also use
 `sf`, `MCMCvis`, `bayesplot`, `DHARMa`, `glmmTMB`, `vegan`, `gllvm`,
 `neonPlantEcology`, `pairwiseAdonis`, `readxl`, `usethis`.
 
@@ -84,7 +91,10 @@ Exported helpers worth knowing:
   HPD intervals from a coda object; `drop_ns = T` drops terms whose interval
   spans zero. This is what generates the `post_beta_*`/`post_gamm_*`/`post_omeg_*`
   tables the figures are built from.
-- `param_plot(post, ylab)`, `plot_vp(hM, VP)`, `ess_plot`, `plot_resid`,
+- `r2t_draws(hM, prob, start)` — per-draw trait R2 for each niche parameter with
+  HPD intervals (Hmsc only returns the mean); feeds Figure 7. Added 2026-11-08.
+- `param_plot(post, ylab, err_width = 0.63)` (whiskers 30% under the ggplot2
+  default, BEM 2026-11-08), `plot_vp(hM, VP)`, `ess_plot`, `plot_resid`,
   `pp_check(m_p, mp_pp, n_draws)` — figure functions
 - `check_residuals(fit, dir, grp, nm)` — DHARMa wrapper that writes the
   `results/reports/check_residuals_*.pdf` files
@@ -92,7 +102,7 @@ Exported helpers worth knowing:
   `sph()` (splits NEON "value +/- error" strings), `order_to_class()`,
   `c25(option)` (colour palette), `HighResTiff()`, `Multiplot()`
 
-Package data objects (`NEON1::<name>`), 15 as of 2026-10-19: `div_one`,
+Package data objects (`NEON1::<name>`), 16 as of 2026-11-08: `div_one`,
 `div_ten`, `spp`, `met`, `dhp`, `str`, `soil_init`, `soil_peri`, `lus`, `topo`,
 `flow_meta`, `fence`, `mve`, `incl_plots`, `NEON_aop_crs`. (`str.rda` and
 `soil_peri.rda` did not exist before the 2026-10-19 run of `import_data.R`.)
@@ -147,23 +157,24 @@ make_map_figures.R # Figures 1 and 2; ALSO builds flow_meta (plot -> flow age),
 make_models.R     # <- THE model script. Builds matrices, fits both Hmsc models,
                   #   writes m_p_mod{0,1}.rda, m_p_diag{0,1}.rda, rhat_*.csv, traces
 eval_models.R     # diagnostics on model 0; writes incl_plots.rda and mve.rda
-make_figures.R    # Figures 4-8 from m_p_mod0/m_p_diag0
+make_figures.R    # Figures 3-7 from m_p_mod0/m_p_diag0 (Fig 6 drops terms for
+                  #   species never seen in a cover type; Fig 7 has HPD bars)
 do_model_xv.R     # k-fold CV (2, 5, 10) -> m_p_xv{0,1}_{1..3}.rda  [NEVER RUN]
 ```
 
 **Reinstall `NEON1` after every step that rewrites package data**, or the next
 script reads stale objects: after `import_data.R`, after `import_fence.R`, and
-after `eval_models.R`. `R CMD INSTALL --library=/media/bem/data/NEON_claude/rlib NEON1`
+after `eval_models.R`. `R CMD INSTALL --library=/media/bem/data/NEON1/rlib NEON1`
 takes ~20 s.
 
 To run any of it outside RStudio:
 
 ```bash
-export R_LIBS_USER=/media/bem/data/NEON_claude/rlib
+export R_LIBS_USER=/media/bem/data/NEON1/rlib
 export PROJ_DATA=<conda-env>/share/proj   # terra/sf fail with "empty srs" without
 export PROJ_LIB=$PROJ_DATA                #   these; the conda PROJ data dir is not
 export GDAL_DATA=<conda-env>/share/gdal   #   found automatically
-cd /media/bem/data/NEON_claude/NEON1      # the package root, NOT exec/
+cd /media/bem/data/NEON1/NEON1      # the package root, NOT exec/
 Rscript exec/<script>.R
 ```
 
@@ -180,8 +191,11 @@ exists), `extra.R` (scratch; errors on an undefined `plant_df`),
 ## 6. The fitted models
 
 Two Hmsc probit joint species distribution models, identical structure, differing
-only in the response data. Both were refit on **2026-10-19** against NEON data
-current to 2025-06-24; the numbers below are that fit.
+only in the response data. Both were refit on **2026-11-08** against NEON data
+current to 2025-06-24 with `time_since_fence = 2026 - completion` (values 0, 12,
+24, 29, 31; previously 2024-referenced). The 2026-10-19 fit is in
+`model_results_archive/fit_20261019/`; current headline numbers are in
+`reference/model_history.md`. Sizes and dimensions below are unchanged.
 
 - **Model 0** (`m_p_mod0.rda`, 4.23 GB) - 1-m2 percent-cover data (`div_one`),
   binarised at cover > 0.0001. **188 plot-dates x 35 species.** This is the
@@ -214,7 +228,9 @@ Objects inside each file:
   partitioning), `mc_s_{beta,gamm,omeg}_*` (MCMCvis summaries),
   `post_{beta,gamm,omeg}_*` (90% HPD tables)
 
-Wall time for `make_models.R` is ~56 min for both models on 16 cores.
+Wall time for `make_models.R` is ~57 min for both models on 16 cores
+(2026-11-08); `eval_models.R` + reinstall + `make_figures.R` +
+`make_map_figures.R` then take ~2 min.
 `m_p_mod1.rda` needs several GB of RAM to load; `do_model_xv.R` works around
 this by `load()`ing then immediately `rm()`ing everything except the model
 object and calling `gc()`. Use the same pattern. For diagnostics, prefer the
@@ -233,19 +249,20 @@ and have not been revisited** against the refreshed data.
 
 ### Manuscript
 
-`MS2/NEON1_MS2_0_5.docx` (2026-10-19) is the live draft and the first with a
-complete Introduction, Methods, Results and Discussion. The Abstract and
-Figure S1 are still missing, some `REF` placeholders remain in the
-Introduction, and the author list still reads `[PAI guy]`. **Before editing the
-manuscript, renumbering a figure or adding a citation, read
-`reference/manuscript_state.md`** - it holds the section-by-section state,
-the figure-to-script table, the word counts and the list of citations added in
-v0_5 that are not yet in `MS2/references.docx`.
+`ms/NEON1_0_6.docx` (2026-11-08) is the live draft, built from BEM's tracked
+edits and 33 comments on 0_5 (`ms/NEON1_0_5_BEM.docx`). It opens with a
+numbered **Notes for co-authors** list (answers and open issues) above the
+Abstract, has a generated Literature Cited, and every Results number is from
+the 2026-11-08 fit. **Before editing the manuscript, renumbering a figure or
+adding a citation, read `reference/manuscript_state.md`** - it holds the build
+recipe, BEM's standing rules from the 0_5 review, the figure table and the open
+issues.
 
-Two things settled in v0_5 that should not be reopened: the Introduction's
-numbered question list carries **no citations** (BEM's instruction), and the
-statistical-analysis text now matches `make_models.R` rather than the generic
-probit model v0_4 described.
+Settled, not to be reopened: the numbered question list carries no citations;
+Introduction paragraphs 1-2 stay in BEM's outline form until he says otherwise;
+every DLNR (2013) citation carries a page number; package citations other than
+the model-fitting ones go in DESCRIPTION; the statistical text matches
+`make_models.R`.
 
 ### Site facts and the fence dates
 
@@ -279,17 +296,19 @@ are not. Needs a caption note on `param_plot_cover.pdf`.
 
 **Open gaps:**
 
-- Manuscript: the Abstract is a heading only; Figure S1 has a caption and no
-  figure; `REF`/`REFS` placeholders remain in Introduction paragraphs 1-3;
-  `MS2/NEON1_MS2_0_4.docx` has not been moved to `previous_versions/`.
+- Manuscript: see the open issues in `reference/manuscript_state.md` (Abstract,
+  Figure S1, [PAI guy], unidentified Meier 2023, fence-date source, ...).
+- No plot-level random effect although each plot is surveyed 3-10 times (the
+  main departure from König et al. 2021; `rL0` has a commented sketch).
 - Cross-validation (`do_model_xv.R`) has never been run. Paths are fixed, but it
   refits each model 17 times (2+5+10 folds) - budget ~11 h for both.
 - Model 1 is converged and reported in Table 2, but is still unfigured and has
   no variance-partitioning or parameter plots of its own. `evaluateModelFit`
   returns `NA` for AUC and Tjur R2 for 1 of its 94 species, so those means need
   `na.rm = TRUE` (0.9622 and 0.5629).
-- Trait data (DP1.10026.001) is imported but never connected - "unsure how to
-  connect the samples to each other".
+- Trait data (DP1.10026.001): 49 samples, 10 of 35 1-m2 species, no introduced
+  species - a coverage problem, not a linkage one (Hmsc traits are per
+  species). See `results/reports/foliar_traits/`.
 - Whether the three dropped species should still be dropped under the refreshed
   data.
 - Soil chemistry is imported and still absent from `XFormula`; Table 1 now says
@@ -362,7 +381,7 @@ are off the manuscript path and were not touched.
   `truncate_output()` from the global environment and kills the kernel too.
   Remove named objects only.
 - The kernel does not see `NEON1` until
-  `.libPaths(c('/media/bem/data/NEON_claude/rlib', .libPaths()))` is called.
+  `.libPaths(c('/media/bem/data/NEON1/rlib', .libPaths()))` is called.
   Run the pipeline scripts with `source('exec/<script>.R')` from the package
   root rather than shelling out to `Rscript`, which cannot find the conda R.
 
@@ -412,7 +431,7 @@ are off the manuscript path and were not touched.
 - **Figures on disk are 9 files.** `map_figure` and `disturbance_figure` as
   `.pdf` and `.png`, plus `vp_plot`, `param_plot_env`, `param_plot_disturb`,
   `param_plot_cover` and `ve_invasive` as `.pdf`. The manuscript numbers them
-  1-7 in that order; `make_figures.R`'s own comments still say 4-8.
+  1-7 in that order, as do `make_figures.R`'s comments since 2026-11-08.
 - **Figure labels are clipped at 35 species.** The first species name runs off
   the left edge of `vp_plot.pdf`, `param_plot_env.pdf` and
   `param_plot_cover.pdf`, and in the last the y-axis title collides with a
@@ -468,10 +487,9 @@ the NEON1-specific conventions are below.
 Each is loaded only when its trigger fires; none of them repeats a rule that
 must be followed unconditionally.
 
-- `reference/manuscript_state.md` - **before editing `MS2/NEON1_MS2_0_5.docx`,
-  renumbering or regenerating a figure, or adding a citation.** Section-by-section
-  state, word counts, the figure-to-script table, equations, tables, and the
-  citations not yet in `MS2/references.docx`.
+- `reference/manuscript_state.md` - **before editing `ms/NEON1_0_6.docx` (or
+  building 0_7), renumbering or regenerating a figure, or adding a citation.**
+  Build recipe, BEM's review rules, figure table, open issues, reports.
 - `reference/site_facts.md` - **before writing or checking a study-system
   sentence, citing DLNR (2013), or touching the ungulate exclusion dates.**
   Verified site facts with page numbers, the 13-unit fence table, and the
@@ -479,3 +497,24 @@ must be followed unconditionally.
 - `reference/model_history.md` - **before quoting any fit,
   variance-partitioning or trait-R2 number that did not come from the current
   `m_p_diag*.rda`.** The 2024-vs-2026 comparison tables.
+
+### Added 2026-11-08
+
+- **Omega is a covariance.** `post_omeg_*` and `mc_s_omeg_*` are the residual
+  covariance matrix, diagonal included, both triangles. Count convergence and
+  credible pairs over unique off-diagonal pairs, and quote residual
+  *correlations* from `m_ca_*[[1]]$mean`. See `reference/model_history.md`.
+- **Cover-type separation.** Every credible cover-type term for a species never
+  recorded in that cover type is negative (39/39): the sign is data-driven,
+  the magnitude prior-driven. Figure 6 excludes them.
+- **Presence threshold.** The 1-m2 matrix scores presence at fractional cover
+  > 0.0001, i.e. 0.01% cover (0_5 said 0.0001%); the occurrence filter counts
+  plot-dates with cover > 0.001%.
+- **LibreOffice (`soffice`) crashes in the sandbox** even with a private
+  profile; verify .docx output by re-parsing it, not by rendering.
+- **A `python` cell declaring the OpenAlex credential hung ~10 min** and
+  restarted the kernel; Crossref (no key) was enough for the reference list.
+- The bash tool refuses heredocs containing R `$` expressions ("too complex to
+  screen"); write such files from the python kernel instead.
+- `make_models.R` scales `decimalLongitude` from `decimalLatitude` (copy-paste
+  slip). Harmless - neither is in `XFormula` - but fix before using them.

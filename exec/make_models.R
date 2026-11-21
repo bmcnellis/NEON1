@@ -1,6 +1,6 @@
 # BEM
 # created  29 July 2024
-# last run 21 Sep 2024
+# last run 21 Sep 2024; refit 19 Oct 2026 (NEON data to 2025-06-24); refit Nov 2026 (reference year 2026)
 
 set.seed(1)
 
@@ -95,7 +95,8 @@ inv_nat <- NEON1::spp |>
   distinct()
 fence <- NEON1::fence |>
   mutate(enclosure_completed = ifelse(enclosure_name == 'Kata-Stein', 2014, enclosure_completed)) |>
-  mutate(time_since_fence = 2024 - enclosure_completed) |>
+  # reference year 2026 (BEM, MS v0_5 review); was 2024 for the 2024-09 and 2026-10-19 fits
+  mutate(time_since_fence = 2026 - enclosure_completed) |>
   mutate(time_since_fence = ifelse(enclosure_name == 'Army Road', 0, time_since_fence)) |>
   mutate(time_since_fence = ifelse(is.na(time_since_fence), 0, time_since_fence)) |>
   select(c(plotID, time_since_fence)) |>

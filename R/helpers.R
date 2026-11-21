@@ -294,3 +294,23 @@ posterior_from_coda <- function(mcmc, term, prob, average = F, drop_ns = F) {
   return(hpd)
 
 }
+#' @rdname helpers
+#' @export
+r2t_draws <- function(hM, prob = 0.9, start = 1) {
+  # Posterior distribution of the trait R2 for each niche parameter: the
+  # proportion of among-species variation in Beta[k, ] explained by the trait
+  # model, cor(Beta[k, ], (Tr %*% t(Gamma))[, k])^2, computed per posterior draw.
+  # Hmsc::computeVariancePartitioning() returns only the mean of these values
+  # (its R2T$Beta), so the mean here matches that output.
+
+  post <- Hmsc::poolMcmcChains(hM$postList, start = start)
+  r2 <- t(sapply(post, \(a) {
+    mu <- hM$Tr %*% t(a$Gamma)
+    sapply(seq_len(hM$nc), \(k) stats::cor(a$Beta[k, ], mu[, k])^2)
+  }))
+  colnames(r2) <- hM$covNames
+  hp <- coda::HPDinterval(coda::as.mcmc(r2), prob = prob)
+
+  data.frame(var = hM$covNames, mean = colMeans(r2), lower = hp[, 'lower'], upper = hp[, 'upper'], row.names = NULL)
+
+}

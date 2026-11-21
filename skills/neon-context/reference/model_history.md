@@ -54,3 +54,43 @@ quoting 41.45 / 26.43 / 11.30 is stale, and the ordering it argues for has
 changed.** The ranking is the finding; the magnitudes all shrank because mean
 R2T fell.
 
+## Refit of 2026-11-08: reference year 2026
+
+Same data, same species, same specification; the only change is
+`time_since_fence = 2026 - enclosure_completed` (was 2024), giving values
+{0, 12, 24, 29, 31} instead of {0, 10, 22, 27, 29}. Because unfenced plots stay
+at 0, the shift is not a constant offset and the models had to be refit. The
+2026-10-19 fit is archived in
+`results/model_results/model_results_archive/fit_20261019/`. Current numbers
+(model 0 unless stated), read from `m_p_diag0/1.rda` by `extract_06.R`-style
+code:
+
+| | 2026-10-19 (ref 2024) | 2026-11-08 (ref 2026) |
+|---|---|---|
+| VP mean share: elevation / cover / years-free / PAI | 23.1 / 26.8 / 18.6 / 12.9 % | **24.9 / 24.3** / 19.8 / 12.7 % |
+| VP x TjurR2: cover / elev / years-free / PAI | 16.5 / 13.4 / 9.5 / 8.3 % | 15.0 / 14.4 / 10.1 / 8.2 % |
+| R2T$Y model 0 / model 1 | 17.8 / 13.8 % | 17.2 / 14.5 % |
+| R2T cow / PAI / years-free | 17.3 / 13.5 / 14.4 % | 17.5 / 13.6 / 13.3 % |
+| credible Beta: elev / PAI / flow / years-free / cow / log | 17 / 23 / 13 / 16 / 8 / 6 | 17 / 25 / 13 / 17 / 8 / 7 |
+| credible cover-type terms | 58 | 65 (39 for species never seen in that cover type) |
+| Beta Rhat > 1.01 (model 0 / 1) | 6 / 10 | 6 / 8 |
+| Omega unique pairs Rhat > 1.01 (model 0 / 1) | 10 / ? | 3 / 8 (one > 1.1 in model 1: 1.12) |
+| credible association pairs (model 0 / 1) | 35 / 388 | 34 / 392 |
+| credible Gamma interactions, model 1 | ytf x I -0.10, cow x I 0.86 | ytf x I -0.11, cow x I 0.85 |
+
+Elevation now edges cover type for the largest mean VP share, but cover type
+is still first once scaled by Tjur R2. Nothing changed direction.
+
+## Counting conventions corrected in v0_6
+
+- `mc_s_omeg_*` covers the full Omega matrix: diagonal (variances) and both
+  triangles. v0_5's "25 of 1,225 association parameters (max 1.19)" counted
+  both; the max came from a diagonal variance. Count unique off-diagonal pairs
+  (ns*(ns-1)/2: 595 and 4,371).
+- `post_omeg_*` values are **covariances**. v0_5 quoted them (0.97, -0.88) as
+  associations. Residual correlations come from `m_ca_*[[1]]$mean`; for every
+  credible pair they are |r| >= 0.94.
+- Mean VP shares are `rowMeans(m_vp_0$vals)`; "scaled" shares multiply each
+  species column by `mf_p_0$TjurR2` (v0_5 numbers reproduce exactly this way).
+
+

@@ -151,8 +151,8 @@ fence_u$completed <- as.integer(format(as.POSIXct(fence_u$DateComp, tz = 'UTC'),
 # both are set to 2014 here, the same assumption import_fence.R makes
 fence_u$date_estimated <- is.na(fence_u$completed)
 fence_u$completed <- ifelse(fence_u$date_estimated, 2014, fence_u$completed)
-# match the model predictor: 2024 - completion, and 0 where not yet ungulate-free
-fence_u$ung_free <- 2024 - fence_u$completed
+# match the model predictor: 2026 - completion, and 0 where not yet ungulate-free
+fence_u$ung_free <- 2026 - fence_u$completed
 fence_u$ung_free <- ifelse(fence_u$UngFree == 'No', 0, fence_u$ung_free)
 fence_u$ung_free <- factor(fence_u$ung_free, levels = sort(unique(fence_u$ung_free)))
 fence_u <- st_crop(fence_u, outline)

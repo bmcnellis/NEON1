@@ -221,14 +221,15 @@ ess_plot <- function(es_df, var, ylab) {
 }
 #' @rdname plot_functions
 #' @export
-param_plot <- function(post, ylab) {
+param_plot <- function(post, ylab, err_width = 0.63) {
   require(ggplot2)
 
   plot0 <- ggplot(data = post, aes(x = spp, y = mean, ymin = lower, ymax = upper)) +
 
     geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey50') +
     geom_point() +
-    geom_errorbar() +
+    # err_width 0.63 is the ggplot2 default (0.9) reduced by 30% (BEM, MS v0_5 review)
+    geom_errorbar(width = err_width) +
 
     facet_wrap(~ var, scales = 'free_x') +
 
